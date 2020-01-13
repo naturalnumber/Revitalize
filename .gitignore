@@ -181,6 +181,3 @@ dmypy.json
 /venv/
 revitalize/__pycache__/
 templates/
-
-# Works in progress
-/Scripts/initialize_database.sh
