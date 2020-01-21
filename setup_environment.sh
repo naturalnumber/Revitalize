@@ -6,12 +6,13 @@ set -o pipefail
 
 echo "Welcome to the Revitalize Virtual Environment Setup"
 echo "Your operating system has been determined to be: acceptable :)"
-read -p "Would you like to continue? Y/n" -n 1 -r
+read -p "Would you like to initialize the virtual environment in this directory? Y/n" -n 1 -r
 echo
+
 
 if [[ ${REPLY} =~ ^[Yy]$ ]]
 then
     python3.7 -m venv venv
     source venv/bin/activate
-    pip install -r requirements.txt
+    python3.7 -m pip install -r requirements.txt
 fi
