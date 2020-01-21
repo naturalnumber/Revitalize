@@ -5,7 +5,7 @@ set -o pipefail
 #[ "${DEBUG}" = 'true' ] &&
 set -o xtrace
 
-rm -r ./Revitalize/migrations/
+[ -d "./Revitalize/migrations/" ] && rm -r ./Revitalize/migrations/
 ./manage.py makemigrations
 ./manage.py migrate --run-syncdb
 
