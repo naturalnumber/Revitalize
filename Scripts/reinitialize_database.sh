@@ -9,3 +9,4 @@ set -o xtrace
 ./manage.py makemigrations
 ./manage.py migrate --run-syncdb
 
+# then: ./manage.py createsuperuser

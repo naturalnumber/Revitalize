@@ -207,7 +207,8 @@ class Cohort(ModelMore):
 
     type = models.CharField(max_length=3, blank=False, choices=CohortType.choices)
 
-    clients = models.ManyToManyField('Client', db_table='cohort_membership')
+    clients = models.ManyToManyField('Client', db_table='cohort_membership',
+                                     related_name='cohorts')
 
     data = models.TextField(blank=False, help_text="This should be a JSON.", default="{}")
 
@@ -250,8 +251,10 @@ class Submission(ModelBase):
     rm_fields_search.extend(ModelBase.rm_fields_search)
     rm_fields_serialize.extend(ModelBase.rm_fields_serialize)
 
-    client = models.ForeignKey('Client', on_delete=models.CASCADE, null=False)  # related_name='+'
-    form = models.ForeignKey('Form', on_delete=models.SET_NULL, null=True)
+    client = models.ForeignKey('Client', on_delete=models.CASCADE, null=False,
+                               related_name='submissions')
+    form = models.ForeignKey('Form', on_delete=models.SET_NULL, null=True,
+                             related_name='submissions')
 
     time = models.DateTimeField(null=False)
     values = models.TextField(blank=False, help_text="This should be a JSON.")
@@ -290,8 +293,10 @@ class DataPoint(AbstractDataPoint):
     rm_fields_search.extend(AbstractDataPoint.rm_fields)
     rm_fields_serialize.extend(AbstractDataPoint.rm_fields)
 
-    client = models.ForeignKey('Client', on_delete=models.CASCADE, null=False)  # related_name='+'
-    indicator = models.ForeignKey('Indicator', on_delete=models.SET_NULL, null=True)
+    client = models.ForeignKey('Client', on_delete=models.CASCADE, null=False,
+                               related_name='data_points')
+    indicator = models.ForeignKey('Indicator', on_delete=models.SET_NULL, null=True,
+                                  related_name='data_points')
 
     def __str__(self):
         return f"{self.indicator.name} by {str(self.client)} for {self.time}"
@@ -314,8 +319,10 @@ class Goal(ModelBase):
     start = models.DateTimeField(null=False)
     target = models.TextField(blank=False, help_text="This should be a JSON.")
 
-    client = models.ForeignKey('Client', on_delete=models.CASCADE, null=False)  # related_name='+'
-    indicator = models.ForeignKey('Indicator', on_delete=models.SET_NULL, null=True)
+    client = models.ForeignKey('Client', on_delete=models.CASCADE, null=False,
+                               related_name='goals')
+    indicator = models.ForeignKey('Indicator', on_delete=models.SET_NULL, null=True,
+                                  related_name='goals')
 
     completed = models.BooleanField(null=False, default=False)
 
@@ -339,7 +346,9 @@ class AnonymizedIndicator(AbstractIndicator):
     rm_fields_search.extend(AbstractIndicator.rm_fields)
     rm_fields_serialize.extend(AbstractIndicator.rm_fields)
 
-    indicator = models.ForeignKey('Indicator', on_delete=models.SET_NULL, null=True)
+    indicator = models.ForeignKey('Indicator', on_delete=models.SET_NULL, null=True,
+                                  related_name='a_indicators')
+
     anonmization = models.TextField(blank=False, help_text="This should be a JSON.")
 
 
@@ -357,8 +366,10 @@ class CohortDataPoint(AbstractDataPoint):
     rm_fields_search.extend(AbstractDataPoint.rm_fields)
     rm_fields_serialize.extend(AbstractDataPoint.rm_fields)
 
-    cohort = models.ForeignKey('Cohort', on_delete=models.CASCADE, null=False)  # related_name='+'
-    a_indicator = models.ForeignKey('AnonymizedIndicator', on_delete=models.SET_NULL, null=True)
+    cohort = models.ForeignKey('Cohort', on_delete=models.CASCADE, null=False,
+                               related_name='c_data_points')
+    a_indicator = models.ForeignKey('AnonymizedIndicator', on_delete=models.SET_NULL, null=True,
+                                    related_name='c_data_points')
 
     a_client_id = models.IntegerField(null=False)
 
