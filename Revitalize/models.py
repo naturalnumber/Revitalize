@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+
 class ModelBase(models.Model):
     rm_fields: list = ['id', 'flags', 'creation_time', 'update_time']
     rm_fields_display: list = ['id']
@@ -48,9 +49,10 @@ class Profile(ModelBase):
     rm_fields_serialize.extend(ModelBase.rm_fields_serialize)
 
     class GenderType(models.TextChoices):
-        Male = 'M', _('Male')
-        Female = 'F', _('Female')
-        Other = 'O', _('Other') # This will require a more detailed translation solution...
+        MALE = 'M', _('Male')
+        FEMALE = 'F', _('Female')
+        OTHER = 'O', _('Other') # This will require a more detailed translation solution...
+        NOT_DISCLOSED = 'N', _('Prefer Not To Disclose')
 
     first_name = models.CharField(max_length=40, blank=False)
     middle_name = models.CharField(max_length=40, null=False, blank=True, verbose_name="Middle Name(s)")
@@ -59,11 +61,11 @@ class Profile(ModelBase):
     date_of_birth = models.DateField(null=False, db_index=True)
     gender = models.CharField(max_length=1, blank=False, choices=GenderType.choices)
 
-    phone_number = models.CharField(max_length=40, blank=False, help_text="The primary contact number for a user.")
+    phone_number = models.CharField(max_length=40, blank=False, help_text="The primary contact number.")
     phone_number_alt = models.CharField(max_length=40, null=False, blank=True,
-                                        help_text="A secondary contact number for a user.",
+                                        help_text="A secondary contact number.",
                                         verbose_name="Alternate Phone Number")
-    email = models.EmailField(blank=False, help_text="The email address for a user.")
+    email = models.EmailField(blank=False, help_text="The contact email address.")
 
     # Abstract into an address object?
     street_address = models.CharField(max_length=200, blank=False)
