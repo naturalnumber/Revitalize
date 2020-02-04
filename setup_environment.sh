@@ -17,17 +17,22 @@ then
 
     if [[ ${REPLY} =~ ^[Yy]$ ]]
     then
-
+        echo "Proceeding with python3.7: `python3.7 --version`"
         python3.7 -m venv venv
-        source venv/bin/activate
-        python3.7 -m pip install -r requirements.txt
-
     else
-
+        echo "Proceeding with python3: `python3 --version`"
         python3 -m venv venv
-        source venv/bin/activate
-        python3 -m pip install -r requirements.txt
-
     fi
+    source venv/bin/activate
+    python -m pip install -r requirements.txt
+    echo "Current environment is: `python --version`"
+    echo ""
+
+    echo "Remember to set this environment as your project interpreter."
+    echo "(In PyCharm: Project Settings -> Project Interpreter -> gear Icon -> add -> existing environment (should default to this with correct settings.))"
+    echo "Then run:"
+    echo "    ./Scripts/reinitialize_database.sh"
+    echo "    ./manage.py createsuperuser"
+    echo "    ./Scripts/do_migration.sh"
 
 fi
