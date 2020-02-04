@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'Revitalize.apps.RevitalizeConfig',
         'rest_framework',
+        'corsheaders',
 ]
 
 MIDDLEWARE = [
@@ -49,6 +50,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+        'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'backend_api.urls'
@@ -121,6 +123,11 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
+
+# CORS
+CORS_ORIGIN_WHITELIST = [
+    'http://localhost:3000',
+]
 
 
 # Static files (CSS, JavaScript, Images)
