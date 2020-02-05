@@ -14,15 +14,16 @@ class UserSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True, 'required': True}}
 
 
-class StringSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = String
-        fields = ModelHelper.serialize(model.__name__)
-
-
 class TextSerializer(serializers.ModelSerializer):
     class Meta:
         model = Text
+        fields = ModelHelper.serialize(model.__name__)
+        #  fields = ('id', 'value')
+
+
+class StringSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = String
         fields = ModelHelper.serialize(model.__name__)
 
 
@@ -117,15 +118,6 @@ class IntRangeQuestionSerializer(serializers.ModelSerializer):
         fields = ModelHelper.serialize(model.__name__)
 
 
-class FloatRangeQuestionSerializer(serializers.ModelSerializer):
-    labels = StringGroupSerializer(many=False)
-    question = QuestionSerializer(many=False)
-
-    class Meta:
-        model = FloatRangeQuestion
-        fields = ModelHelper.serialize(model.__name__)
-
-
 class BooleanChoiceQuestionSerializer(serializers.ModelSerializer):
     labels = StringGroupSerializer(many=False)
     question = QuestionSerializer(many=False)
@@ -153,6 +145,15 @@ class MultiChoiceQuestionSerializer(serializers.ModelSerializer):
         fields = ModelHelper.serialize(model.__name__)
 
 
+class FloatRangeQuestionSerializer(serializers.ModelSerializer):
+    labels = StringGroupSerializer(many=False)
+    question = QuestionSerializer(many=False)
+
+    class Meta:
+        model = FloatRangeQuestion
+        fields = ModelHelper.serialize(model.__name__)
+
+
 class SubmissionSerializer(serializers.ModelSerializer):
     # profile = ProfileSerializer(many=False)
     user = UserSerializer(many=False)
@@ -165,7 +166,7 @@ class SubmissionSerializer(serializers.ModelSerializer):
 
 class TextResponseSerializer(serializers.ModelSerializer):
     submission = SubmissionSerializer(many=False)
-    question = QuestionSerializer(many=False)
+    question = TextQuestionSerializer(many=False)
 
     class Meta:
         model = TextResponse
@@ -174,7 +175,7 @@ class TextResponseSerializer(serializers.ModelSerializer):
 
 class IntResponseSerializer(serializers.ModelSerializer):
     submission = SubmissionSerializer(many=False)
-    question = QuestionSerializer(many=False)
+    question = IntQuestionSerializer(many=False)
 
     class Meta:
         model = IntResponse
@@ -183,7 +184,7 @@ class IntResponseSerializer(serializers.ModelSerializer):
 
 class FloatResponseSerializer(serializers.ModelSerializer):
     submission = SubmissionSerializer(many=False)
-    question = QuestionSerializer(many=False)
+    question = FloatQuestionSerializer(many=False)
 
     class Meta:
         model = FloatResponse
@@ -192,25 +193,16 @@ class FloatResponseSerializer(serializers.ModelSerializer):
 
 class IntRangeResponseSerializer(serializers.ModelSerializer):
     submission = SubmissionSerializer(many=False)
-    question = QuestionSerializer(many=False)
+    question = IntRangeQuestionSerializer(many=False)
 
     class Meta:
         model = IntRangeResponse
         fields = ModelHelper.serialize(model.__name__)
 
 
-class FloatRangeResponseSerializer(serializers.ModelSerializer):
-    submission = SubmissionSerializer(many=False)
-    question = QuestionSerializer(many=False)
-
-    class Meta:
-        model = FloatRangeResponse
-        fields = ModelHelper.serialize(model.__name__)
-
-
 class BooleanChoiceResponseSerializer(serializers.ModelSerializer):
     submission = SubmissionSerializer(many=False)
-    question = QuestionSerializer(many=False)
+    question = BooleanChoiceQuestionSerializer(many=False)
 
     class Meta:
         model = BooleanChoiceResponse
@@ -219,7 +211,7 @@ class BooleanChoiceResponseSerializer(serializers.ModelSerializer):
 
 class ExclusiveChoiceResponseSerializer(serializers.ModelSerializer):
     submission = SubmissionSerializer(many=False)
-    question = QuestionSerializer(many=False)
+    question = ExclusiveChoiceQuestionSerializer(many=False)
 
     class Meta:
         model = ExclusiveChoiceResponse
@@ -228,8 +220,17 @@ class ExclusiveChoiceResponseSerializer(serializers.ModelSerializer):
 
 class MultiChoiceResponseSerializer(serializers.ModelSerializer):
     submission = SubmissionSerializer(many=False)
-    question = QuestionSerializer(many=False)
+    question = MultiChoiceQuestionSerializer(many=False)
 
     class Meta:
         model = MultiChoiceResponse
+        fields = ModelHelper.serialize(model.__name__)
+
+
+class FloatRangeResponseSerializer(serializers.ModelSerializer):
+    submission = SubmissionSerializer(many=False)
+    question = TextQuestionSerializer(many=False)
+
+    class Meta:
+        model = FloatRangeResponse
         fields = ModelHelper.serialize(model.__name__)

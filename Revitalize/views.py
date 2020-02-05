@@ -19,16 +19,16 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
 
 
-class StringViewSet(viewsets.ModelViewSet):
-    _model = String
-    queryset = _model.objects.all()
-    serializer_class = StringSerializer
-
-
 class TextViewSet(viewsets.ModelViewSet):
     _model = Text
     queryset = _model.objects.all()
     serializer_class = TextSerializer
+
+
+class StringViewSet(viewsets.ModelViewSet):
+    _model = String
+    queryset = _model.objects.all()
+    serializer_class = StringSerializer
 
 
 class StringGroupViewSet(viewsets.ModelViewSet):

@@ -37,7 +37,7 @@ INSTALLED_APPS = [
         'django.contrib.staticfiles',
         'Revitalize.apps.RevitalizeConfig',
         'rest_framework',
-        'corsheaders',
+        'corsheaders'
 ]
 
 MIDDLEWARE = [
