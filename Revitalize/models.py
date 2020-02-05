@@ -219,6 +219,7 @@ class Profile(ModelBase):
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
+    ModelHelper.register(_name, 'user', 99, to_search=True, foreign=User)
     ModelHelper.register(_name, 'first_name', 80, to_filter=True, to_search=True)
     ModelHelper.register(_name, 'middle_name', 80)
     ModelHelper.register(_name, 'last_name', 80, to_filter=True, to_search=True)
