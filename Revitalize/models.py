@@ -93,7 +93,7 @@ class Text(models.Model):
     value = models.TextField(blank=False, help_text="The English value.")
 
     def __str__(self):
-        return self.value + f" ({self.id})"
+        return self.value[0:min(len(self.value), 12)] + ("" if len(self.value) < 15 else "...") + f" ({self.id})"
 
     # Used with views and serializers
     ModelHelper.register(_name, 'id', 100, to_search=True)
@@ -330,6 +330,9 @@ class Survey(ModelBase):
     _parent = 'ModelBase'  # internal name
 
     form = models.ForeignKey(Form, on_delete=models.SET_NULL, null=True, related_name='surveys')
+    
+    def __str__(self):
+        return str(self.form.name) + f" ({self.id})"
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -447,6 +450,9 @@ class QuestionType(ModelBase):
 
     class Meta:
         abstract = True
+
+    def __str__(self):
+        return f"{self._name} data for {str(self.question)}"
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -712,6 +718,9 @@ class TextResponse(Response):
     class Meta:
         unique_together = (('submission', 'question'),)
         index_together = (('submission', 'question'),)
+        
+    def __str__(self):
+        return f"{self._name} for {str(self.question)} in {str(self.submission)}"
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -734,6 +743,9 @@ class IntResponse(Response):
     class Meta:
         unique_together = (('submission', 'question'),)
         index_together = (('submission', 'question'),)
+        
+    def __str__(self):
+        return f"{self._name} for {str(self.question)} in {str(self.submission)}"
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -757,6 +769,9 @@ class FloatResponse(Response):
         unique_together = (('submission', 'question'),)
         index_together = (('submission', 'question'),)
 
+    def __str__(self):
+        return f"{self._name} for {str(self.question)} in {str(self.submission)}"
+
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
     ModelHelper.register(_name, 'submission', 85, foreign=Submission)
@@ -779,6 +794,9 @@ class IntRangeResponse(Response):
     class Meta:
         unique_together = (('submission', 'question'),)
         index_together = (('submission', 'question'),)
+        
+    def __str__(self):
+        return f"{self._name} for {str(self.question)} in {str(self.submission)}"
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -802,6 +820,9 @@ class BooleanChoiceResponse(Response):
     class Meta:
         unique_together = (('submission', 'question'),)
         index_together = (('submission', 'question'),)
+        
+    def __str__(self):
+        return f"{self._name} for {str(self.question)} in {str(self.submission)}"
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -825,6 +846,9 @@ class ExclusiveChoiceResponse(Response):
     class Meta:
         unique_together = (('submission', 'question'),)
         index_together = (('submission', 'question'),)
+        
+    def __str__(self):
+        return f"{self._name} for {str(self.question)} in {str(self.submission)}"
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -848,6 +872,9 @@ class MultiChoiceResponse(Response):
     class Meta:
         unique_together = (('submission', 'question'),)
         index_together = (('submission', 'question'),)
+        
+    def __str__(self):
+        return f"{self._name} for {str(self.question)} in {str(self.submission)}"
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -871,6 +898,9 @@ class FloatRangeResponse(Response):
     class Meta:
         unique_together = (('submission', 'question'),)
         index_together = (('submission', 'question'),)
+        
+    def __str__(self):
+        return f"{self._name} for {str(self.question)} in {str(self.submission)}"
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
