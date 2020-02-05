@@ -1,16 +1,17 @@
 from django.contrib.auth.models import User
 from rest_framework import viewsets
 
-from Revitalize.models import Profile, String, StringGroup, Text, Form, Survey, QuestionGroup, Question, TextQuestion, \
-    IntRangeQuestion, Submission, IntRangeResponse, TextResponse, TextElement, IntQuestion, FloatQuestion, \
-    ExclusiveChoiceQuestion, MultiChoiceQuestion, IntResponse, FloatResponse, ExclusiveChoiceResponse, \
-    MultiChoiceResponse
-from Revitalize.serializers import ProfileSerializer, StringGroupSerializer, StringSerializer, TextSerializer, \
-    UserSerializer, FormSerializer, SurveySerializer, QuestionSerializer, InputSerializer, TextQuestionSerializer, \
-    IntRangeQuestionSerializer, SubmissionSerializer, IntRangeResponseSerializer, TextResponseSerializer, \
-    QuestionGroupSerializer, TextElementSerializer, IntQuestionSerializer, FloatQuestionSerializer, \
-    ExclusiveChoiceQuestionSerializer, MultiChoiceQuestionSerializer, IntResponseSerializer, FloatResponseSerializer, \
-    ExclusiveChoiceResponseSerializer, MultiChoiceResponseSerializer
+from Revitalize.models import BooleanChoiceQuestion, BooleanChoiceResponse, ExclusiveChoiceQuestion, \
+    ExclusiveChoiceResponse, FloatQuestion, FloatRangeQuestion, FloatRangeResponse, FloatResponse, Form, IntQuestion, \
+    IntRangeQuestion, IntRangeResponse, IntResponse, MultiChoiceQuestion, MultiChoiceResponse, Profile, Question, \
+    QuestionGroup, String, StringGroup, Submission, Survey, Text, TextElement, TextQuestion, TextResponse
+from Revitalize.serializers import BooleanChoiceResponseSerializer, ExclusiveChoiceQuestionSerializer, \
+    ExclusiveChoiceResponseSerializer, FloatQuestionSerializer, FloatRangeQuestionSerializer, \
+    FloatRangeResponseSerializer, FloatResponseSerializer, FormSerializer, IntQuestionSerializer, \
+    IntRangeQuestionSerializer, IntRangeResponseSerializer, IntResponseSerializer, MultiChoiceQuestionSerializer, \
+    MultiChoiceResponseSerializer, ProfileSerializer, QuestionGroupSerializer, QuestionSerializer, \
+    StringGroupSerializer, StringSerializer, SubmissionSerializer, SurveySerializer, TextElementSerializer, \
+    TextQuestionSerializer, TextResponseSerializer, TextSerializer, UserSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -96,6 +97,18 @@ class IntRangeQuestionViewSet(viewsets.ModelViewSet):
     queryset = _model.objects.all()
 
 
+class FloatRangeQuestionViewSet(viewsets.ModelViewSet):
+    _model = FloatRangeQuestion
+    serializer_class = FloatRangeQuestionSerializer
+    queryset = _model.objects.all()
+
+
+class BooleanChoiceQuestionViewSet(viewsets.ModelViewSet):
+    _model = BooleanChoiceQuestion
+    serializer_class = ExclusiveChoiceQuestionSerializer
+    queryset = _model.objects.all()
+
+
 class ExclusiveChoiceQuestionViewSet(viewsets.ModelViewSet):
     _model = ExclusiveChoiceQuestion
     serializer_class = ExclusiveChoiceQuestionSerializer
@@ -135,6 +148,18 @@ class FloatResponseViewSet(viewsets.ModelViewSet):
 class IntRangeResponseViewSet(viewsets.ModelViewSet):
     _model = IntRangeResponse
     serializer_class = IntRangeResponseSerializer
+    queryset = _model.objects.all()
+
+
+class FloatRangeResponseViewSet(viewsets.ModelViewSet):
+    _model = FloatRangeResponse
+    serializer_class = FloatRangeResponseSerializer
+    queryset = _model.objects.all()
+
+
+class BooleanChoiceResponseViewSet(viewsets.ModelViewSet):
+    _model = BooleanChoiceResponse
+    serializer_class = BooleanChoiceResponseSerializer
     queryset = _model.objects.all()
 
 

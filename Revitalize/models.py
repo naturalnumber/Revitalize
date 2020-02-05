@@ -91,12 +91,12 @@ class String(models.Model):
     id = models.BigAutoField(editable=False, primary_key=True)
     value = models.CharField(max_length=100, blank=False, help_text="The English value.")
 
+    def __str__(self):
+        return self.value + f" ({self.id})"
+
     # Used with views and serializers
     ModelHelper.register(_name, 'id', 100, to_search=True, to_serialize=False)
     ModelHelper.register(_name, 'value', 75, to_search=True)
-
-    def __str__(self):
-        return self.value + f" ({self.id})"
 
 
 class Text(models.Model):
@@ -105,12 +105,12 @@ class Text(models.Model):
     id = models.BigAutoField(editable=False, primary_key=True)
     value = models.TextField(blank=False, help_text="The English value.")
 
+    def __str__(self):
+        return self.value + f" ({self.id})"
+
     # Used with views and serializers
     ModelHelper.register(_name, 'id', 100, to_search=True, to_serialize=False)
     ModelHelper.register(_name, 'value', 75, to_search=True)
-
-    def __str__(self):
-        return self.value + f" ({self.id})"
 
 
 class StringGroup(models.Model):
@@ -119,12 +119,12 @@ class StringGroup(models.Model):
     id = models.BigAutoField(editable=False, primary_key=True)
     values = models.TextField(blank=False, help_text="The English values in a JSON.")
 
+    def __str__(self):
+        return self.values + f" ({self.id})"
+
     # Used with views and serializers
     ModelHelper.register(_name, 'id', 100, to_search=True, to_serialize=False)
     ModelHelper.register(_name, 'values', 75, to_search=True, text_type='JSON')
-
-    def __str__(self):
-        return self.values + f" ({self.id})"
 
 
 class ModelBase(models.Model):
@@ -154,7 +154,7 @@ class Profile(ModelBase):
     _name = 'Profile'  # internal name
     _parent = 'ModelBase'  # internal name
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
 
     class GenderType(models.TextChoices):
         MALE = 'M', _('Male')
@@ -212,6 +212,10 @@ class Profile(ModelBase):
         else:
             return f"{self.first_name} {self.last_name} {self.id}"
 
+    def submissions(self):
+        if self.pk:
+            return Submission.objects.filter()
+
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
     ModelHelper.register(_name, 'first_name', 80, to_filter=True, to_search=True)
@@ -245,9 +249,9 @@ class Nameable(ModelBase):
     _name = 'Nameable'  # internal name
     _parent = 'ModelBase'  # internal name
 
-    name = models.ForeignKey('String', on_delete=models.SET_NULL, null=True,  # related_name='strings',
+    name = models.ForeignKey(String, on_delete=models.SET_NULL, null=True,  # related_name='strings',
                              help_text="The name of this entry.")
-    description = models.ForeignKey('Text', on_delete=models.SET_NULL, null=True,  # related_name='texts',
+    description = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True,  # related_name='texts',
                                     help_text="The description of this entry.")
 
     notes = models.TextField(blank=True, null=False, help_text="The notes associated with this entry.")
@@ -256,7 +260,7 @@ class Nameable(ModelBase):
         abstract = True
 
     def __str__(self):
-        return self.name.value
+        return self.name.value + f" ({self.id})"
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -323,7 +327,7 @@ class Survey(ModelBase):
     _name = 'Survey'  # internal name
     _parent = 'ModelBase'  # internal name
 
-    form = models.ForeignKey('Form', on_delete=models.SET_NULL, null=True, related_name='surveys')
+    form = models.ForeignKey(Form, on_delete=models.SET_NULL, null=True, related_name='surveys')
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -351,9 +355,9 @@ class TextElement(FormElement):
     _parent = 'FormElement'  # internal name
 
     # can't inherit
-    form = models.ForeignKey('Form', on_delete=models.SET_NULL, null=True, related_name='text_elements', db_index=True)
+    form = models.ForeignKey(Form, on_delete=models.SET_NULL, null=True, related_name='text_elements', db_index=True)
 
-    text = models.ForeignKey('Text', on_delete=models.SET_NULL, null=True, related_name='text_elements',
+    text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='text_elements',
                              help_text="The text of this text element.")
 
     class Meta:
@@ -369,26 +373,15 @@ class QuestionGroup(FormElement):
     _name = 'QuestionGroup'  # internal name
     _parent = 'FormElement'  # internal name
 
-    class DataType(models.TextChoices):
-        UNKNOWN = '?', _('Unknown')
-        BOOLEAN = 'B', _('Boolean')
-        CHOICES = 'C', _('Boolean Choices')
-        INTEGER = 'I', _('Integer')
-        INTEGER_RANGE = 'R', _('Integer Range')
-        DECIMAL = 'D', _('Decimal')
-        DECIMAL_RANGE = 'S', _('Decimal Range')
-        TEXT = 'T', _('Text')
-
     # can't inherit
-    form = models.ForeignKey('Form', on_delete=models.SET_NULL, null=True, related_name='question_groups', db_index=True)
+    form = models.ForeignKey(Form, on_delete=models.SET_NULL, null=True, related_name='question_groups',
+                             db_index=True)
 
-    type = models.CharField(max_length=1, blank=False, choices=DataType.choices, default=DataType.UNKNOWN)
-
-    text = models.ForeignKey('Text', on_delete=models.SET_NULL, null=True, related_name='question_groups',
+    text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='question_groups',
                              help_text="The text of this question group.")
 
     # Used for units, format hints, etc.
-    annotations = models.ForeignKey('StringGroup', on_delete=models.SET_NULL, null=True, related_name='question_groups',
+    annotations = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True, related_name='question_groups',
                                     help_text="The annotation of this question group.")
 
     class Meta:
@@ -397,7 +390,6 @@ class QuestionGroup(FormElement):
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
-    ModelHelper.register(_name, 'type', 85, to_filter=True, to_search=True)
     ModelHelper.register(_name, 'text', 75, foreign=Text)
     ModelHelper.register(_name, 'annotations', 70)
 
@@ -406,20 +398,32 @@ class Question(Displayable):
     _name = 'Question'  # internal name
     _parent = 'Displayable'  # internal name
 
-    group = models.ForeignKey('QuestionGroup', on_delete=models.SET_NULL, null=True,
-                                 related_name='inputs', db_index=True)
+    class DataType(models.TextChoices):
+        UNKNOWN = '?', _('Unknown')
+        TEXT = 'T', _('Text')
+        INT = 'I', _('Integer')
+        FLOAT = 'D', _('Decimal')
+        INT_RANGE = 'R', _('Integer Range')
+        BOOLEAN = 'B', _('Boolean')
+        EXCLUSIVE = 'X', _('Exclusive Choices')
+        CHOICES = 'M', _('Multiple Choices')
+        FLOAT_RANGE = 'S', _('Decimal Range')
+
+    type = models.CharField(max_length=1, blank=False, choices=DataType.choices, default=DataType.UNKNOWN)
 
     # QuestionGroup order in question
     number = models.IntegerField(null=False)
+    optional = models.BooleanField(null=False, default=False)
 
-    text = models.ForeignKey('Text', on_delete=models.SET_NULL, null=True, related_name='questions',
+    group = models.ForeignKey(QuestionGroup, on_delete=models.SET_NULL, null=True,
+                              related_name='inputs', db_index=True)
+
+    text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='questions',
                              help_text="The text of this question.")
 
     # Used for units, format hints, etc.
-    annotations = models.ForeignKey('StringGroup', on_delete=models.SET_NULL, null=True, related_name='questions',
+    annotations = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True, related_name='questions',
                                     help_text="The annotation of this question.")
-
-    optional = models.BooleanField(null=False, default=False)
 
     class Meta:
         unique_together = (('group', 'number'),)
@@ -427,11 +431,12 @@ class Question(Displayable):
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
+    ModelHelper.register(_name, 'type', 85, to_filter=True, to_search=True)
     ModelHelper.register(_name, 'group', 85, foreign=QuestionGroup)
     ModelHelper.register(_name, 'number', 80)
     ModelHelper.register(_name, 'text', 75, foreign=Text)
     ModelHelper.register(_name, 'annotations', 70)
-    ModelHelper.register(_name, 'optional', 65,)
+    ModelHelper.register(_name, 'optional', 65, )
 
 
 class QuestionType(ModelBase):
@@ -460,12 +465,12 @@ class TextQuestion(SingleInputQuestion):
     _name = 'TextQuestion'  # internal name
     _parent = 'SingleInputQuestion'  # internal name
 
-    # Can't inherit
-    question = models.ForeignKey('Question', on_delete=models.SET_NULL, null=True,
-                                 related_name='text_questions', db_index=True)
-
     min_length = models.IntegerField(null=False)
     max_length = models.IntegerField(null=False)
+
+    # Can't inherit
+    question = models.OneToOneField(Question, on_delete=models.SET_NULL, null=True,
+                                    related_name='text_questions', db_index=True)
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -478,12 +483,12 @@ class IntQuestion(SingleInputQuestion):
     _name = 'IntQuestion'  # internal name
     _parent = 'SingleInputQuestion'  # internal name
 
-    # Can't inherit
-    question = models.ForeignKey('Question', on_delete=models.SET_NULL, null=True,
-                                 related_name='int_questions', db_index=True)
-
     min = models.IntegerField(null=False)
     max = models.IntegerField(null=False)
+
+    # Can't inherit
+    question = models.OneToOneField(Question, on_delete=models.SET_NULL, null=True,
+                                    related_name='int_questions', db_index=True)
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -498,12 +503,12 @@ class FloatQuestion(SingleInputQuestion):
     _name = 'FloatQuestion'  # internal name
     _parent = 'SingleInputQuestion'  # internal name
 
-    # Can't inherit
-    question = models.ForeignKey('Question', on_delete=models.SET_NULL, null=True,
-                                 related_name='float_questions', db_index=True)
-
     min = models.FloatField(null=False)
     max = models.FloatField(null=False)
+
+    # Can't inherit
+    question = models.OneToOneField(Question, on_delete=models.SET_NULL, null=True,
+                                    related_name='float_questions', db_index=True)
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -519,7 +524,6 @@ class FiniteChoiceQuestion(QuestionType):
     _parent = 'QuestionType'  # internal name
 
     number_of_values = models.IntegerField(null=False)
-
     initial = models.IntegerField(null=False)
 
     class Meta:
@@ -536,17 +540,15 @@ class IntRangeQuestion(FiniteChoiceQuestion):
     _parent = 'FiniteChoiceQuestion'  # internal name
 
     min = models.IntegerField(null=False)
-
     max = models.IntegerField(null=False)
-
     step = models.IntegerField(null=False, default=1)
 
-    # Can't inherit
-    question = models.ForeignKey('Question', on_delete=models.SET_NULL, null=True,
-                                 related_name='int_range_questions', db_index=True)
-
-    labels = models.ForeignKey('StringGroup', on_delete=models.SET_NULL, null=True, related_name='int_range_questions',
+    labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True, related_name='int_range_questions',
                                help_text="The labels of this question's categories.")
+
+    # Can't inherit
+    question = models.OneToOneField(Question, on_delete=models.SET_NULL, null=True,
+                                    related_name='int_range_questions', db_index=True)
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -557,17 +559,35 @@ class IntRangeQuestion(FiniteChoiceQuestion):
     ModelHelper.register(_name, 'step', 75, to_filter=True)
 
 
+class BooleanChoiceQuestion(FiniteChoiceQuestion):
+    _name = 'BooleanChoiceQuestion'  # internal name
+    _parent = 'FiniteChoiceQuestion'  # internal name
+
+    labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
+                               related_name='boolean_choice_questions',
+                               help_text="The labels of this question's categories.")
+
+    # Can't inherit
+    question = models.OneToOneField(Question, on_delete=models.SET_NULL, null=True,
+                                    related_name='boolean_choice_questions', db_index=True)
+
+    # Used with views and serializers
+    ModelHelper.inherit(_parent, _name)
+    ModelHelper.register(_name, 'question', 85, foreign=Question)
+    ModelHelper.register(_name, 'labels', 70, text_type='JSON', foreign=StringGroup)
+
+
 class ExclusiveChoiceQuestion(FiniteChoiceQuestion):
     _name = 'ExclusiveChoiceQuestion'  # internal name
     _parent = 'FiniteChoiceQuestion'  # internal name
 
-    # Can't inherit
-    question = models.ForeignKey('Question', on_delete=models.SET_NULL, null=True,
-                                 related_name='exclusive_choice_questions', db_index=True)
-
-    labels = models.ForeignKey('StringGroup', on_delete=models.SET_NULL, null=True, 
+    labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
                                related_name='exclusive_choice_questions',
                                help_text="The labels of this question's categories.")
+
+    # Can't inherit
+    question = models.OneToOneField(Question, on_delete=models.SET_NULL, null=True,
+                                    related_name='exclusive_choice_questions', db_index=True)
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -580,16 +600,15 @@ class MultiChoiceQuestion(FiniteChoiceQuestion):
     _parent = 'FiniteChoiceQuestion'  # internal name
 
     min_choices = models.IntegerField(null=False)
-
     max_choices = models.IntegerField(null=False)
 
-    # Can't inherit
-    question = models.ForeignKey('Question', on_delete=models.SET_NULL, null=True,
-                                 related_name='multi_choice_questions', db_index=True)
-
-    labels = models.ForeignKey('StringGroup', on_delete=models.SET_NULL, null=True, 
+    labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
                                related_name='multi_choice_questions',
                                help_text="The labels of this question's categories.")
+
+    # Can't inherit
+    question = models.OneToOneField(Question, on_delete=models.SET_NULL, null=True,
+                                    related_name='multi_choice_questions', db_index=True)
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -599,12 +618,53 @@ class MultiChoiceQuestion(FiniteChoiceQuestion):
     ModelHelper.register(_name, 'max_choices', 75, to_filter=True)
 
 
+class ContinuousChoiceQuestion(QuestionType):
+    _name = 'ContinuousChoiceQuestion'  # internal name
+    _parent = 'QuestionType'  # internal name
+
+    range = models.FloatField(null=False)
+    initial = models.FloatField(null=False)
+
+    class Meta:
+        abstract = True
+
+    # Used with views and serializers
+    ModelHelper.inherit(_parent, _name)
+    ModelHelper.register(_name, 'range', 75, to_filter=True)
+    ModelHelper.register(_name, 'initial', 75, to_filter=True)
+
+
+class FloatRangeQuestion(ContinuousChoiceQuestion):
+    _name = 'FloatRangeQuestion'  # internal name
+    _parent = 'FiniteChoiceQuestion'  # internal name
+
+    min = models.FloatField(null=False)
+    max = models.FloatField(null=False)
+
+    labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
+                               related_name='float_range_questions',
+                               help_text="The labels of this question's categories.")
+
+    # Can't inherit
+    question = models.OneToOneField(Question, on_delete=models.SET_NULL, null=True,
+                                    related_name='float_range_questions', db_index=True)
+
+    # Used with views and serializers
+    ModelHelper.inherit(_parent, _name)
+    ModelHelper.register(_name, 'question', 85, foreign=Question)
+    ModelHelper.register(_name, 'labels', 70, text_type='JSON', foreign=StringGroup)
+    ModelHelper.register(_name, 'min', 75, to_filter=True)
+    ModelHelper.register(_name, 'max', 75, to_filter=True)
+
+
 class Submission(ModelBase):
     _name = 'Submission'  # internal name
     _parent = 'ModelBase'  # internal name
 
-    profile = models.ForeignKey('Profile', on_delete=models.CASCADE, null=False, related_name='submissions')
-    form = models.ForeignKey('Form', on_delete=models.SET_NULL, null=True, related_name='submissions')
+    # profile = models.ForeignKey('Profile', on_delete=models.CASCADE, null=False, related_name='submissions')
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, related_name='submissions')
+    form = models.ForeignKey(Form, on_delete=models.SET_NULL, null=True, related_name='submissions')
 
     time = models.DateTimeField(null=False)
 
@@ -617,7 +677,8 @@ class Submission(ModelBase):
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
-    ModelHelper.register(_name, 'profile', 85, foreign=Profile)
+    # ModelHelper.register(_name, 'profile', 85, foreign=Profile)
+    ModelHelper.register(_name, 'user', 85, foreign=User)
     ModelHelper.register(_name, 'form', 85, foreign=Form)
     ModelHelper.register(_name, 'time', 75, to_filter=True)
     ModelHelper.register(_name, 'raw_data', 60, False, text_type='JSON')
@@ -639,12 +700,12 @@ class TextResponse(Response):
     _name = 'TextResponse'  # internal name
     _parent = 'Response'  # internal name
 
-    submission = models.ForeignKey('Submission', on_delete=models.SET_NULL, null=True, related_name='text_responses')
-
     value = models.TextField(null=False)
 
-    question = models.ForeignKey('Question', on_delete=models.SET_NULL, null=True,
-                              related_name='text_responses')
+    submission = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True, related_name='text_responses')
+
+    question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True,
+                                 related_name='text_responses')
 
     class Meta:
         unique_together = (('submission', 'question'),)
@@ -661,12 +722,12 @@ class IntResponse(Response):
     _name = 'IntResponse'  # internal name
     _parent = 'Response'  # internal name
 
-    submission = models.ForeignKey('Submission', on_delete=models.SET_NULL, null=True, related_name='int_responses')
-
     value = models.IntegerField(null=False)
 
-    question = models.ForeignKey('Question', on_delete=models.SET_NULL, null=True,
-                              related_name='int_responses')
+    submission = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True, related_name='int_responses')
+
+    question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True,
+                                 related_name='int_responses')
 
     class Meta:
         unique_together = (('submission', 'question'),)
@@ -683,12 +744,12 @@ class FloatResponse(Response):
     _name = 'FloatResponse'  # internal name
     _parent = 'Response'  # internal name
 
-    submission = models.ForeignKey('Submission', on_delete=models.SET_NULL, null=True, related_name='float_responses')
-
     value = models.FloatField(null=False)
 
-    question = models.ForeignKey('Question', on_delete=models.SET_NULL, null=True,
-                              related_name='float_responses')
+    submission = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True, related_name='float_responses')
+
+    question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True,
+                                 related_name='float_responses')
 
     class Meta:
         unique_together = (('submission', 'question'),)
@@ -705,13 +766,17 @@ class IntRangeResponse(Response):
     _name = 'IntRangeResponse'  # internal name
     _parent = 'Response'  # internal name
 
-    submission = models.ForeignKey('Submission', on_delete=models.SET_NULL, null=True,
-                                   related_name='int_range_responses')
-
     value = models.IntegerField(null=False)
 
-    question = models.ForeignKey('Question', on_delete=models.SET_NULL, null=True,
-                              related_name='int_range_responses')
+    submission = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True,
+                                   related_name='int_range_responses')
+
+    question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True,
+                                 related_name='int_range_responses')
+
+    class Meta:
+        unique_together = (('submission', 'question'),)
+        index_together = (('submission', 'question'),)
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -719,22 +784,68 @@ class IntRangeResponse(Response):
     ModelHelper.register(_name, 'question', 85, foreign=Question)
     ModelHelper.register(_name, 'value', 75, to_filter=True, to_search=True)
 
+
+class FloatRangeResponse(Response):
+    _name = 'FloatRangeResponse'  # internal name
+    _parent = 'Response'  # internal name
+
+    value = models.FloatField(null=False)
+
+    submission = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True,
+                                   related_name='float_range_responses')
+
+    question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True,
+                                 related_name='float_range_responses')
+
     class Meta:
         unique_together = (('submission', 'question'),)
         index_together = (('submission', 'question'),)
+
+    # Used with views and serializers
+    ModelHelper.inherit(_parent, _name)
+    ModelHelper.register(_name, 'submission', 85, foreign=Submission)
+    ModelHelper.register(_name, 'question', 85, foreign=Question)
+    ModelHelper.register(_name, 'value', 75, to_filter=True, to_search=True)
+
+
+class BooleanChoiceResponse(Response):
+    _name = 'BooleanChoiceResponse'  # internal name
+    _parent = 'Response'  # internal name
+
+    value = models.IntegerField(null=False)
+
+    submission = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True,
+                                   related_name='boolean_choice_responses')
+
+    question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True,
+                                 related_name='boolean_choice_responses')
+
+    class Meta:
+        unique_together = (('submission', 'question'),)
+        index_together = (('submission', 'question'),)
+
+    # Used with views and serializers
+    ModelHelper.inherit(_parent, _name)
+    ModelHelper.register(_name, 'submission', 85, foreign=Submission)
+    ModelHelper.register(_name, 'question', 85, foreign=Question)
+    ModelHelper.register(_name, 'value', 75, to_filter=True, to_search=True)
 
 
 class ExclusiveChoiceResponse(Response):
     _name = 'ExclusiveChoiceResponse'  # internal name
     _parent = 'Response'  # internal name
 
-    submission = models.ForeignKey('Submission', on_delete=models.SET_NULL, null=True,
-                                   related_name='exclusive_choice_responses')
-
     value = models.IntegerField(null=False)
 
-    question = models.ForeignKey('Question', on_delete=models.SET_NULL, null=True,
-                              related_name='exclusive_choice_responses')
+    submission = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True,
+                                   related_name='exclusive_choice_responses')
+
+    question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True,
+                                 related_name='exclusive_choice_responses')
+
+    class Meta:
+        unique_together = (('submission', 'question'),)
+        index_together = (('submission', 'question'),)
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -742,29 +853,25 @@ class ExclusiveChoiceResponse(Response):
     ModelHelper.register(_name, 'question', 85, foreign=Question)
     ModelHelper.register(_name, 'value', 75, to_filter=True, to_search=True)
 
-    class Meta:
-        unique_together = (('submission', 'question'),)
-        index_together = (('submission', 'question'),)
-
 
 class MultiChoiceResponse(Response):
     _name = 'MultiChoiceResponse'  # internal name
     _parent = 'Response'  # internal name
 
-    submission = models.ForeignKey('Submission', on_delete=models.SET_NULL, null=True,
-                                   related_name='multi_choice_responses')
-
     value_bits = models.IntegerField(null=False)
 
-    question = models.ForeignKey('Question', on_delete=models.SET_NULL, null=True,
-                              related_name='multi_choice_responses')
+    submission = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True,
+                                   related_name='multi_choice_responses')
+
+    question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True,
+                                 related_name='multi_choice_responses')
+
+    class Meta:
+        unique_together = (('submission', 'question'),)
+        index_together = (('submission', 'question'),)
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
     ModelHelper.register(_name, 'submission', 85, foreign=Submission)
     ModelHelper.register(_name, 'question', 85, foreign=Question)
     ModelHelper.register(_name, 'value_bits', 75, to_filter=True, to_search=True)
-
-    class Meta:
-        unique_together = (('submission', 'question'),)
-        index_together = (('submission', 'question'),)
