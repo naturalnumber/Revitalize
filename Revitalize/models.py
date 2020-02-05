@@ -81,7 +81,7 @@ class ModelHelper:
 
         temp = [f for f in model_fields if not model_do_not_serializes[f]]
 
-        temp.sort(key=lambda x: model_sorts[x])
+        temp.sort(key=lambda x: -model_sorts[x])
 
         return temp
 
@@ -96,7 +96,7 @@ class Text(models.Model):
         return self.value + f" ({self.id})"
 
     # Used with views and serializers
-    ModelHelper.register(_name, 'id', 100, to_search=True, to_serialize=False)
+    ModelHelper.register(_name, 'id', 100, to_search=True)
     ModelHelper.register(_name, 'value', 75, to_search=True)
 
 
@@ -110,7 +110,7 @@ class String(models.Model):
         return self.value + f" ({self.id})"
 
     # Used with views and serializers
-    ModelHelper.register(_name, 'id', 100, to_search=True, to_serialize=False)
+    ModelHelper.register(_name, 'id', 100, to_search=True)
     ModelHelper.register(_name, 'value', 75, to_search=True)
 
 
@@ -124,7 +124,7 @@ class StringGroup(models.Model):
         return self.values + f" ({self.id})"
 
     # Used with views and serializers
-    ModelHelper.register(_name, 'id', 100, to_search=True, to_serialize=False)
+    ModelHelper.register(_name, 'id', 100, to_search=True)
     ModelHelper.register(_name, 'values', 75, to_search=True, text_type='JSON')
 
 
@@ -145,7 +145,7 @@ class ModelBase(models.Model):
         abstract = True
 
     # Used with views and serializers
-    ModelHelper.register(_name, 'id', 100, to_search=True, to_serialize=False)
+    ModelHelper.register(_name, 'id', 100, to_search=True)
     ModelHelper.register(_name, 'flags', 25, False, to_search=True, text_type='JSON')
     ModelHelper.register(_name, 'creation_time', 5, to_filter=True, to_serialize=False)
     ModelHelper.register(_name, 'update_time', 5, to_filter=True, to_serialize=False)
