@@ -37,7 +37,8 @@ INSTALLED_APPS = [
         'django.contrib.staticfiles',
         'Revitalize.apps.RevitalizeConfig',
         'rest_framework',
-        ]
+        'corsheaders'
+]
 
 MIDDLEWARE = [
         'django.middleware.security.SecurityMiddleware',
@@ -47,7 +48,8 @@ MIDDLEWARE = [
         'django.contrib.auth.middleware.AuthenticationMiddleware',
         'django.contrib.messages.middleware.MessageMiddleware',
         'django.middleware.clickjacking.XFrameOptionsMiddleware',
-        ]
+        'corsheaders.middleware.CorsMiddleware',
+]
 
 ROOT_URLCONF = 'backend_api.urls'
 
@@ -63,10 +65,10 @@ TEMPLATES = [
                                 'django.template.context_processors.request',
                                 'django.contrib.auth.context_processors.auth',
                                 'django.contrib.messages.context_processors.messages',
-                                ],
-                        },
+                        ],
                 },
-        ]
+        },
+]
 
 WSGI_APPLICATION = 'backend_api.wsgi.application'
 
@@ -77,19 +79,14 @@ DATABASES = {
         'default': {
                 'ENGINE': 'django.db.backends.sqlite3',
                 'NAME'  : os.path.join(BASE_DIR, 'db.sqlite3'),
-                }
         }
+}
 
 REST_FRAMEWORK = {
-        'DEFAULT_AUTHENTICATION_CLASSES': (
-                'rest_framework_simplejwt.authentication.JWTAuthentication',
-                )
-        }
-
-        # 'DEFAULT_PERMISSION_CLASSES': (
-        #         'rest_framework.permissions.AllowAny',
-        #         )
-        # }
+        'DEFAULT_PERMISSION_CLASSES': (
+                'rest_framework.permissions.AllowAny',
+        )
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
@@ -97,17 +94,17 @@ REST_FRAMEWORK = {
 AUTH_PASSWORD_VALIDATORS = [
         {
                 'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-                },
+        },
         {
                 'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-                },
+        },
         {
                 'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-                },
+        },
         {
                 'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-                },
-        ]
+        },
+]
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
@@ -121,6 +118,11 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
+
+# CORS
+CORS_ORIGIN_WHITELIST = [
+        'http://localhost:3000',
+]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
