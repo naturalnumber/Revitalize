@@ -1,22 +1,49 @@
 from django.contrib.auth.models import User
-from rest_framework import viewsets
+from rest_framework import viewsets, permissions
+from rest_framework.decorators import api_view
+from rest_framework.views import APIView
 
 from Revitalize.models import BooleanChoiceQuestion, BooleanChoiceResponse, ExclusiveChoiceQuestion, \
     ExclusiveChoiceResponse, FloatQuestion, FloatRangeQuestion, FloatRangeResponse, FloatResponse, Form, IntQuestion, \
     IntRangeQuestion, IntRangeResponse, IntResponse, MultiChoiceQuestion, MultiChoiceResponse, Profile, Question, \
-    QuestionGroup, String, StringGroup, Submission, Survey, Text, TextElement, TextQuestion, TextResponse
+    QuestionGroup, String, StringGroup, Submission, Survey, Text, TextElement, TextQuestion, TextResponse, Response
 from Revitalize.serializers import BooleanChoiceResponseSerializer, ExclusiveChoiceQuestionSerializer, \
     ExclusiveChoiceResponseSerializer, FloatQuestionSerializer, FloatRangeQuestionSerializer, \
     FloatRangeResponseSerializer, FloatResponseSerializer, FormSerializer, IntQuestionSerializer, \
     IntRangeQuestionSerializer, IntRangeResponseSerializer, IntResponseSerializer, MultiChoiceQuestionSerializer, \
     MultiChoiceResponseSerializer, ProfileSerializer, QuestionGroupSerializer, QuestionSerializer, \
     StringGroupSerializer, StringSerializer, SubmissionSerializer, SurveySerializer, TextElementSerializer, \
-    TextQuestionSerializer, TextResponseSerializer, TextSerializer, UserSerializer
+    TextQuestionSerializer, TextResponseSerializer, TextSerializer, UserSerializer, UserSerializerWithToken
 
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+
+
+# Fetch User Information
+@api_view(['GET'])
+def get_current_user(request):
+    serializer = UserSerializer(request.user)
+    return Response(serializer.data)
+
+
+# Create User view that handles registration
+class CreateUserView(APIView):
+    permission_classes = (permissions.AllowAny, )
+
+    def post(self, request):
+        user = request.data.get('user')
+        if not user:
+            return Response({'response': 'error', 'message': 'No data found'})
+        serializer = UserSerializerWithToken(data=user)
+
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            return Response({"response": "error", "message": serializer.errors})
+
+        return Response({"response": "success", "message": "user created successfully"})
 
 
 class TextViewSet(viewsets.ModelViewSet):
