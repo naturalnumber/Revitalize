@@ -1,17 +1,23 @@
-from django.contrib.auth.models import User
-from rest_framework import viewsets
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 
-from Revitalize.models import BooleanChoiceQuestion, BooleanChoiceResponse, ExclusiveChoiceQuestion, \
-    ExclusiveChoiceResponse, FloatQuestion, FloatRangeQuestion, FloatRangeResponse, FloatResponse, Form, IntQuestion, \
-    IntRangeQuestion, IntRangeResponse, IntResponse, MultiChoiceQuestion, MultiChoiceResponse, Profile, Question, \
-    QuestionGroup, String, StringGroup, Submission, Survey, Text, TextElement, TextQuestion, TextResponse
-from Revitalize.serializers import BooleanChoiceResponseSerializer, ExclusiveChoiceQuestionSerializer, \
-    ExclusiveChoiceResponseSerializer, FloatQuestionSerializer, FloatRangeQuestionSerializer, \
-    FloatRangeResponseSerializer, FloatResponseSerializer, FormSerializer, IntQuestionSerializer, \
-    IntRangeQuestionSerializer, IntRangeResponseSerializer, IntResponseSerializer, MultiChoiceQuestionSerializer, \
-    MultiChoiceResponseSerializer, ProfileSerializer, QuestionGroupSerializer, QuestionSerializer, \
-    StringGroupSerializer, StringSerializer, SubmissionSerializer, SurveySerializer, TextElementSerializer, \
-    TextQuestionSerializer, TextResponseSerializer, TextSerializer, UserSerializer
+from Revitalize.serializers import *
+
+
+def _m(m: str):
+    return {'message': m}
+
+
+def _r(m: str, s: status):
+    return ResponseType(_m(m), s)
+
+
+def _ok(m: str):
+    return ResponseType(_m(m), status.HTTP_200_OK)
+
+
+def _bad(m: str):
+    return ResponseType(_m(m), status.HTTP_400_BAD_REQUEST)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -48,11 +54,75 @@ class FormViewSet(viewsets.ModelViewSet):
     serializer_class = FormSerializer
     queryset = _model.objects.all()
 
+    # TODO Should this be removed?
+    @action(detail=True, methods=['POST'])
+    def submit(self, request, pk=None):
+        try:
+            if 'time' not in request.data:
+                return _bad("Must provide a time.")
+            if 'submission_data' not in request.data:
+                return _bad("Must provide submission data.")
+
+            # Validate
+
+            # Check for replacement
+
+            #  user = request.user TODO
+            user = User.objects.get(id=1)  # request.user.profile  # TODO
+
+            form = Form.objects.get(id=pk)
+            time = request.data['time']
+            raw_data = request.data['submission_data']
+
+            submission = Submission.objects.create(user=user, form=form, time=time, raw_data=raw_data)
+
+            serializer = SubmissionSerializer(submission, many=False)
+
+            response = {'message': 'Submission received', 'result': serializer.data}
+
+            # Bad input...
+
+            return ResponseType(response, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return ResponseType(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
+
 
 class SurveyViewSet(viewsets.ModelViewSet):
     _model = Survey
     serializer_class = SurveySerializer
     queryset = _model.objects.all()
+
+    @action(detail=True, methods=['POST'])
+    def submit(self, request, pk=None):
+        try:
+            if 'time' not in request.data:
+                return _bad("Must provide a time.")
+            if 'submission_data' not in request.data:
+                return _bad("Must provide submission data.")
+
+            # Validate
+
+            # Check for replacement
+
+            #  user = request.user TODO
+            user = User.objects.get(id=1)  # request.user.profile  # TODO
+
+            survey = Survey.objects.get(id=pk)
+            form = survey.form
+            time = request.data['time']
+            raw_data = request.data['submission_data']
+
+            submission = Submission.objects.create(user=user, form=form, time=time, raw_data=raw_data)
+
+            serializer = SubmissionSerializer(submission, many=False)
+
+            response = {'message': 'Submission received', 'result': serializer.data}
+
+            # Bad input...
+
+            return ResponseType(response, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return ResponseType(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
 
 class TextElementViewSet(viewsets.ModelViewSet):
@@ -126,6 +196,39 @@ class SubmissionViewSet(viewsets.ModelViewSet):
     serializer_class = SubmissionSerializer
     queryset = _model.objects.all()
 
+    @action(detail=True, methods=['POST'])
+    def resubmit(self, request, pk=None):  # TODO
+        try:
+            # Validate
+
+            submission = Submission.objects.get(pk=pk)
+
+            #  user = request.user TODO
+            user = User.objects.get(id=1)  # request.user.profile  # TODO
+
+            changed = False
+
+            if 'time' in request.data:
+                time = request.data['time']
+                submission.time = time
+
+            if 'submission_data' in request.data:
+                raw_data = request.data['submission_data']
+                submission.raw_data = raw_data
+
+            if not changed:
+                return _r("No change requested", status.HTTP_204_NO_CONTENT)
+
+            serializer = SubmissionSerializer(submission, many=False)
+
+            response = {'message': 'Update received', 'result': serializer.data}
+
+            # Bad input...
+
+            return ResponseType(response, status=status.HTTP_202_ACCEPTED)
+        except Exception as e:
+            return ResponseType(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
+
 
 class TextResponseViewSet(viewsets.ModelViewSet):
     _model = TextResponse
@@ -142,34 +245,4 @@ class IntResponseViewSet(viewsets.ModelViewSet):
 class FloatResponseViewSet(viewsets.ModelViewSet):
     _model = FloatResponse
     serializer_class = FloatResponseSerializer
-    queryset = _model.objects.all()
-
-
-class IntRangeResponseViewSet(viewsets.ModelViewSet):
-    _model = IntRangeResponse
-    serializer_class = IntRangeResponseSerializer
-    queryset = _model.objects.all()
-
-
-class FloatRangeResponseViewSet(viewsets.ModelViewSet):
-    _model = FloatRangeResponse
-    serializer_class = FloatRangeResponseSerializer
-    queryset = _model.objects.all()
-
-
-class BooleanChoiceResponseViewSet(viewsets.ModelViewSet):
-    _model = BooleanChoiceResponse
-    serializer_class = BooleanChoiceResponseSerializer
-    queryset = _model.objects.all()
-
-
-class ExclusiveChoiceResponseViewSet(viewsets.ModelViewSet):
-    _model = ExclusiveChoiceResponse
-    serializer_class = ExclusiveChoiceResponseSerializer
-    queryset = _model.objects.all()
-
-
-class MultiChoiceResponseViewSet(viewsets.ModelViewSet):
-    _model = MultiChoiceResponse
-    serializer_class = MultiChoiceResponseSerializer
     queryset = _model.objects.all()

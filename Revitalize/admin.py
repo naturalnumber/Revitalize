@@ -1,9 +1,6 @@
 from django.contrib import admin
 
-from Revitalize.models import BooleanChoiceQuestion, BooleanChoiceResponse, ExclusiveChoiceQuestion, \
-    ExclusiveChoiceResponse, FloatQuestion, FloatRangeQuestion, FloatRangeResponse, FloatResponse, Form, IntQuestion, \
-    IntRangeQuestion, IntRangeResponse, IntResponse, MultiChoiceQuestion, MultiChoiceResponse, Profile, Question, \
-    QuestionGroup, String, StringGroup, Submission, Survey, Text, TextElement, TextQuestion, TextResponse
+from Revitalize.models import *
 
 admin.site.register(Text)
 admin.site.register(String)
@@ -26,8 +23,3 @@ admin.site.register(Submission)
 admin.site.register(TextResponse)
 admin.site.register(IntResponse)
 admin.site.register(FloatResponse)
-admin.site.register(IntRangeResponse)
-admin.site.register(FloatRangeResponse)
-admin.site.register(BooleanChoiceResponse)
-admin.site.register(ExclusiveChoiceResponse)
-admin.site.register(MultiChoiceResponse)

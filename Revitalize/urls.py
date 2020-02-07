@@ -1,12 +1,7 @@
 from django.urls import include, path
 from rest_framework import routers
 
-from Revitalize.views import BooleanChoiceQuestionViewSet, BooleanChoiceResponseViewSet, ExclusiveChoiceQuestionViewSet, \
-    ExclusiveChoiceResponseViewSet, FloatQuestionViewSet, FloatRangeQuestionViewSet, FloatRangeResponseViewSet, \
-    FloatResponseViewSet, FormViewSet, IntQuestionViewSet, IntRangeQuestionViewSet, IntRangeResponseViewSet, \
-    IntResponseViewSet, MultiChoiceQuestionViewSet, MultiChoiceResponseViewSet, ProfileViewSet, QuestionGroupViewSet, \
-    QuestionViewSet, StringGroupViewSet, StringViewSet, SubmissionViewSet, SurveyViewSet, TextElementViewSet, \
-    TextQuestionViewSet, TextResponseViewSet, TextViewSet
+from Revitalize.views import *
 
 router = routers.DefaultRouter()
 
@@ -31,11 +26,6 @@ router.register('submissions', SubmissionViewSet)
 router.register('responses_text', TextResponseViewSet)
 router.register('responses_int', IntResponseViewSet)
 router.register('responses_float', FloatResponseViewSet)
-router.register('responses_int_range', IntRangeResponseViewSet)
-router.register('responses_float_range', FloatRangeResponseViewSet)
-router.register('responses_boolean_choice', BooleanChoiceResponseViewSet)
-router.register('responses_exclusive_choice', ExclusiveChoiceResponseViewSet)
-router.register('responses_multi_choice', MultiChoiceResponseViewSet)
 
 urlpatterns = [
         path('', include(router.urls)),

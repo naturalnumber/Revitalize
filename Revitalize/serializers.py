@@ -1,10 +1,6 @@
-from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from Revitalize.models import BooleanChoiceQuestion, BooleanChoiceResponse, ExclusiveChoiceQuestion, \
-    ExclusiveChoiceResponse, FloatQuestion, FloatRangeQuestion, FloatRangeResponse, FloatResponse, Form, IntQuestion, \
-    IntRangeQuestion, IntRangeResponse, IntResponse, ModelHelper, MultiChoiceQuestion, MultiChoiceResponse, Profile, \
-    Question, QuestionGroup, String, StringGroup, Submission, Survey, Text, TextElement, TextQuestion, TextResponse
+from Revitalize.models import *
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -39,54 +35,14 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = ModelHelper.serialize(model.__name__)
+        fields.extend(['id'])
 
 
-class FormSerializer(serializers.ModelSerializer):
-    name = StringSerializer(many=False)
-    description = TextSerializer(many=False)
-
-    class Meta:
-        model = Form
-        fields = ModelHelper.serialize(model.__name__)
-
-
-class SurveySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Survey
-        fields = ModelHelper.serialize(model.__name__)
-
-
-class TextElementSerializer(serializers.ModelSerializer):
-    form = FormSerializer(many=False)
-    text = TextSerializer(many=False)
-
-    class Meta:
-        model = TextElement
-        fields = ModelHelper.serialize(model.__name__)
-
-
-class QuestionGroupSerializer(serializers.ModelSerializer):
-    form = FormSerializer(many=False)
-    text = TextSerializer(many=False)
-    annotations = StringGroupSerializer(many=False)
-
-    class Meta:
-        model = QuestionGroup
-        fields = ModelHelper.serialize(model.__name__)
-
-
-class QuestionSerializer(serializers.ModelSerializer):
-    group = QuestionGroupSerializer(many=False)
-    text = TextSerializer(many=False)
-    annotations = StringGroupSerializer(many=False)
-
-    class Meta:
-        model = Question
-        fields = ModelHelper.serialize(model.__name__)
+# Question Types
 
 
 class TextQuestionSerializer(serializers.ModelSerializer):
-    question = QuestionSerializer(many=False)
+    # question = QuestionSerializer(many=False)
 
     class Meta:
         model = TextQuestion
@@ -94,7 +50,7 @@ class TextQuestionSerializer(serializers.ModelSerializer):
 
 
 class IntQuestionSerializer(serializers.ModelSerializer):
-    question = QuestionSerializer(many=False)
+    # question = QuestionSerializer(many=False)
 
     class Meta:
         model = IntQuestion
@@ -102,7 +58,7 @@ class IntQuestionSerializer(serializers.ModelSerializer):
 
 
 class FloatQuestionSerializer(serializers.ModelSerializer):
-    question = QuestionSerializer(many=False)
+    # question = QuestionSerializer(many=False)
 
     class Meta:
         model = FloatQuestion
@@ -111,7 +67,8 @@ class FloatQuestionSerializer(serializers.ModelSerializer):
 
 class IntRangeQuestionSerializer(serializers.ModelSerializer):
     labels = StringGroupSerializer(many=False)
-    question = QuestionSerializer(many=False)
+
+    # question = QuestionSerializer(many=False)
 
     class Meta:
         model = IntRangeQuestion
@@ -120,7 +77,8 @@ class IntRangeQuestionSerializer(serializers.ModelSerializer):
 
 class BooleanChoiceQuestionSerializer(serializers.ModelSerializer):
     labels = StringGroupSerializer(many=False)
-    question = QuestionSerializer(many=False)
+
+    # question = QuestionSerializer(many=False)
 
     class Meta:
         model = BooleanChoiceQuestion
@@ -129,7 +87,8 @@ class BooleanChoiceQuestionSerializer(serializers.ModelSerializer):
 
 class ExclusiveChoiceQuestionSerializer(serializers.ModelSerializer):
     labels = StringGroupSerializer(many=False)
-    question = QuestionSerializer(many=False)
+
+    # question = QuestionSerializer(many=False)
 
     class Meta:
         model = ExclusiveChoiceQuestion
@@ -138,7 +97,8 @@ class ExclusiveChoiceQuestionSerializer(serializers.ModelSerializer):
 
 class MultiChoiceQuestionSerializer(serializers.ModelSerializer):
     labels = StringGroupSerializer(many=False)
-    question = QuestionSerializer(many=False)
+
+    # question = QuestionSerializer(many=False)
 
     class Meta:
         model = MultiChoiceQuestion
@@ -147,11 +107,132 @@ class MultiChoiceQuestionSerializer(serializers.ModelSerializer):
 
 class FloatRangeQuestionSerializer(serializers.ModelSerializer):
     labels = StringGroupSerializer(many=False)
-    question = QuestionSerializer(many=False)
+
+    # question = QuestionSerializer(many=False)
 
     class Meta:
         model = FloatRangeQuestion
         fields = ModelHelper.serialize(model.__name__)
+
+
+# Questions
+
+
+class QuestionSerializer(serializers.ModelSerializer):
+    # Nameable
+    name = StringSerializer(many=False)
+    description = TextSerializer(many=False)
+
+    # group = QuestionGroupSerializer(many=False)
+    text = TextSerializer(many=False)
+    annotations = StringGroupSerializer(many=False)
+
+    class Meta:
+        model = Question
+        fields = ModelHelper.serialize(model.__name__)
+
+
+# Elements
+
+
+class TextElementSerializer(serializers.ModelSerializer):
+    # Nameable
+    name = StringSerializer(many=False)
+    description = TextSerializer(many=False)
+
+    # form = FormSerializer(many=False)
+    text = TextSerializer(many=False)
+
+    class Meta:
+        model = TextElement
+        fields = ModelHelper.serialize(model.__name__)
+
+
+class QuestionGroupSerializer(serializers.ModelSerializer):
+    # Nameable
+    name = StringSerializer(many=False)
+    description = TextSerializer(many=False)
+
+    # form = FormSerializer(many=False)
+    text = TextSerializer(many=False)
+    annotations = StringGroupSerializer(many=False)
+    questions = QuestionSerializer(many=True)
+    question_data = serializers.SerializerMethodField()
+
+    class Meta:
+        model = QuestionGroup
+        fields = ModelHelper.serialize(model.__name__)
+        fields.extend(['questions'])
+        fields.extend(['question_data'])
+
+    def get_question_data(self, qg: QuestionGroup):
+        data = qg.data()
+
+        serializer = None
+
+        if data is not None:
+            if qg.type is qg.DataType.TEXT.value:
+                serializer = TextQuestionSerializer(data, many=False)
+            elif qg.type is qg.DataType.INT.value:
+                serializer = IntQuestionSerializer(data, many=False)
+            elif qg.type is qg.DataType.FLOAT.value:
+                serializer = FloatQuestionSerializer(data, many=False)
+            elif qg.type is qg.DataType.INT_RANGE.value:
+                serializer = IntRangeQuestionSerializer(data, many=False)
+            elif qg.type is qg.DataType.BOOLEAN.value:
+                serializer = BooleanChoiceQuestionSerializer(data, many=False)
+            elif qg.type is qg.DataType.EXCLUSIVE.value:
+                serializer = ExclusiveChoiceQuestionSerializer(data, many=False)
+            elif qg.type is qg.DataType.CHOICES.value:
+                serializer = MultiChoiceQuestionSerializer(data, many=False)
+            elif qg.type is qg.DataType.FLOAT_RANGE.value:
+                serializer = FloatRangeQuestionSerializer(data, many=False)
+
+        return serializer.data if serializer is not None else None
+
+
+# Forms
+
+
+class FormSerializer(serializers.ModelSerializer):
+    # Nameable
+    name = StringSerializer(many=False)
+    description = TextSerializer(many=False)
+
+    class Meta:
+        model = Form
+        fields = ModelHelper.serialize(model.__name__)
+        fields.extend(['id'])
+
+
+class FormSerializerShort(serializers.ModelSerializer):
+    name = StringSerializer(many=False)
+    description = TextSerializer(many=False)
+
+    class Meta:
+        model = Form
+        fields = ['name', 'description', 'type']
+
+
+class FormSerializerDisplay(serializers.ModelSerializer):
+    name = StringSerializer(many=False)
+    description = TextSerializer(many=False)
+    question_groups = QuestionGroupSerializer(many=True)
+
+    class Meta:
+        model = Form
+        fields = ['name', 'description', 'type', 'display', 'question_groups']
+
+
+class SurveySerializer(serializers.ModelSerializer):
+    form = FormSerializerDisplay(many=False)
+
+    class Meta:
+        model = Survey
+        fields = ModelHelper.serialize(model.__name__)
+
+
+# Submissions
 
 
 class SubmissionSerializer(serializers.ModelSerializer):
@@ -162,11 +243,12 @@ class SubmissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Submission
         fields = ModelHelper.serialize(model.__name__)
+        fields.extend(['id'])
 
 
 class TextResponseSerializer(serializers.ModelSerializer):
     submission = SubmissionSerializer(many=False)
-    question = TextQuestionSerializer(many=False)
+    data = TextQuestionSerializer(many=False)
 
     class Meta:
         model = TextResponse
@@ -175,7 +257,7 @@ class TextResponseSerializer(serializers.ModelSerializer):
 
 class IntResponseSerializer(serializers.ModelSerializer):
     submission = SubmissionSerializer(many=False)
-    question = IntQuestionSerializer(many=False)
+    data = IntQuestionSerializer(many=False)
 
     class Meta:
         model = IntResponse
@@ -184,53 +266,8 @@ class IntResponseSerializer(serializers.ModelSerializer):
 
 class FloatResponseSerializer(serializers.ModelSerializer):
     submission = SubmissionSerializer(many=False)
-    question = FloatQuestionSerializer(many=False)
+    data = FloatQuestionSerializer(many=False)
 
     class Meta:
         model = FloatResponse
-        fields = ModelHelper.serialize(model.__name__)
-
-
-class IntRangeResponseSerializer(serializers.ModelSerializer):
-    submission = SubmissionSerializer(many=False)
-    question = IntRangeQuestionSerializer(many=False)
-
-    class Meta:
-        model = IntRangeResponse
-        fields = ModelHelper.serialize(model.__name__)
-
-
-class BooleanChoiceResponseSerializer(serializers.ModelSerializer):
-    submission = SubmissionSerializer(many=False)
-    question = BooleanChoiceQuestionSerializer(many=False)
-
-    class Meta:
-        model = BooleanChoiceResponse
-        fields = ModelHelper.serialize(model.__name__)
-
-
-class ExclusiveChoiceResponseSerializer(serializers.ModelSerializer):
-    submission = SubmissionSerializer(many=False)
-    question = ExclusiveChoiceQuestionSerializer(many=False)
-
-    class Meta:
-        model = ExclusiveChoiceResponse
-        fields = ModelHelper.serialize(model.__name__)
-
-
-class MultiChoiceResponseSerializer(serializers.ModelSerializer):
-    submission = SubmissionSerializer(many=False)
-    question = MultiChoiceQuestionSerializer(many=False)
-
-    class Meta:
-        model = MultiChoiceResponse
-        fields = ModelHelper.serialize(model.__name__)
-
-
-class FloatRangeResponseSerializer(serializers.ModelSerializer):
-    submission = SubmissionSerializer(many=False)
-    question = TextQuestionSerializer(many=False)
-
-    class Meta:
-        model = FloatRangeResponse
         fields = ModelHelper.serialize(model.__name__)
