@@ -38,8 +38,6 @@ def get_current_user(request):
 
 
 # Create User view that handles registration
-class UserSerializerWithToken(object):
-    pass
 
 
 class CreateUserView(APIView):
