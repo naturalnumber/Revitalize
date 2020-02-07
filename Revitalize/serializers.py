@@ -280,7 +280,6 @@ class SubmissionSerializer(serializers.ModelSerializer):
 
 class TextResponseSerializer(serializers.ModelSerializer):
     submission = SubmissionSerializer(many=False)
-    data = TextQuestionSerializer(many=False)
 
     class Meta:
         model = TextResponse
@@ -289,7 +288,6 @@ class TextResponseSerializer(serializers.ModelSerializer):
 
 class IntResponseSerializer(serializers.ModelSerializer):
     submission = SubmissionSerializer(many=False)
-    data = IntQuestionSerializer(many=False)
 
     class Meta:
         model = IntResponse
@@ -298,7 +296,6 @@ class IntResponseSerializer(serializers.ModelSerializer):
 
 class FloatResponseSerializer(serializers.ModelSerializer):
     submission = SubmissionSerializer(many=False)
-    data = FloatQuestionSerializer(many=False)
 
     class Meta:
         model = FloatResponse
