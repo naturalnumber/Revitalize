@@ -11,37 +11,6 @@ class UserSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True, 'required': True}}
 
 
-# Serializer for handling post request for registering a new user
-class UserSerializerWithToken(serializers.ModelSerializer):
-
-    password = serializers.CharField(write_only=True)
-    token = serializers.SerializerMethodField()
-
-    # Custom information, makes use of default jwt settings and encodes user information into a equivalent jwt
-    def get_token(self, obj):
-        jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
-        jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
-
-        payload = jwt_payload_handler(obj)
-        token = jwt_encode_handler(payload)
-
-        return token
-
-    # Override the default create method to ensure password is hashed properly
-    def create(self, validated_data):
-        user = User.objects.create(
-            user_id=validated_data['id'],
-            username=validated_data['username'],
-        )
-        user.set_password(validated_data['password'])
-        user.save()
-        return user
-
-    class Meta:
-        model = User
-        fields = ('id', 'token', 'username', 'password')
-
-
 class TextSerializer(serializers.ModelSerializer):
     class Meta:
         model = Text

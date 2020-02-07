@@ -30,33 +30,6 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
 
 
-# Fetch User Information
-@api_view(['GET'])
-def get_current_user(request):
-    serializer = UserSerializer(request.user)
-    return Response(serializer.data)
-
-
-# Create User view that handles registration
-
-
-class CreateUserView(APIView):
-    permission_classes = (permissions.AllowAny, )
-
-    def post(self, request):
-        user = request.data.get('user')
-        if not user:
-            return Response({'response': 'error', 'message': 'No data found'})
-        serializer = UserSerializerWithToken(data=user)
-
-        if serializer.is_valid():
-            serializer.save()
-        else:
-            return Response({"response": "error", "message": serializer.errors})
-
-        return Response({"response": "success", "message": "user created successfully"})
-
-
 class TextViewSet(viewsets.ModelViewSet):
     _model = Text
     queryset = _model.objects.all()
