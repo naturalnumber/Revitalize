@@ -1,3 +1,8 @@
+from django.contrib.auth.models import User
+from rest_framework import viewsets, permissions
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 
@@ -23,6 +28,35 @@ def _bad(m: str):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+
+
+# Fetch User Information
+@api_view(['GET'])
+def get_current_user(request):
+    serializer = UserSerializer(request.user)
+    return Response(serializer.data)
+
+
+# Create User view that handles registration
+class UserSerializerWithToken(object):
+    pass
+
+
+class CreateUserView(APIView):
+    permission_classes = (permissions.AllowAny, )
+
+    def post(self, request):
+        user = request.data.get('user')
+        if not user:
+            return Response({'response': 'error', 'message': 'No data found'})
+        serializer = UserSerializerWithToken(data=user)
+
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            return Response({"response": "error", "message": serializer.errors})
+
+        return Response({"response": "success", "message": "user created successfully"})
 
 
 class TextViewSet(viewsets.ModelViewSet):
