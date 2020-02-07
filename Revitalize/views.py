@@ -1,12 +1,12 @@
-from django.contrib.auth.models import User
-from rest_framework import viewsets, permissions
-from rest_framework.decorators import api_view
+from rest_framework import permissions
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import status, viewsets
-from rest_framework.decorators import action
 
 from Revitalize.serializers import *
+
+
+# Helper methods
 
 
 def _m(m: str):
