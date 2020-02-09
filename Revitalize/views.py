@@ -268,25 +268,3 @@ class FloatResponseViewSet(viewsets.ModelViewSet):
 class AvailableSurveyViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Survey.objects.all()
     serializer_class = AvailableSurveySerializer
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

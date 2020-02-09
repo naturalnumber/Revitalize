@@ -265,16 +265,27 @@ class SurveySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Survey
-        #fields = ModelHelper.serialize(model.__name__)
-        fields = ['id', 'form']
+        fields = ModelHelper.serialize(model.__name__)
 
 
 class AvailableSurveySerializer(serializers.ModelSerializer):
-    survey = SurveySerializer(many=True, read_only=True)
+    name = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
 
     class Meta:
         model = Survey
-        fields = ['id', 'survey', 'form']
+        fields = ['id', 'name', 'description', 'form_id']
+
+    def get_name(self, s: Survey):
+        name_serializer = StringSerializer(s.form.name, many=False)
+        return name_serializer.data
+
+    def get_description(self, s: Survey):
+        description_serializer = TextSerializer(s.form.description, many=False)
+        return description_serializer.data
+
+    def get_form_id(self, s: Survey):
+        return s.form.id
 
 
 # Submissions
