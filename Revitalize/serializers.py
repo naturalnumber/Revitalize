@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from rest_framework_simplejwt.settings import api_settings
 
 from Revitalize.models import *
 
@@ -266,7 +265,16 @@ class SurveySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Survey
-        fields = ModelHelper.serialize(model.__name__)
+        #fields = ModelHelper.serialize(model.__name__)
+        fields = ['id', 'form']
+
+
+class AvailableSurveySerializer(serializers.ModelSerializer):
+    survey = SurveySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Survey
+        fields = ['id', 'survey', 'form']
 
 
 # Submissions
