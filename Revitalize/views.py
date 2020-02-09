@@ -48,6 +48,18 @@ class StringGroupViewSet(viewsets.ModelViewSet):
     serializer_class = StringGroupSerializer
 
 
+class AddressViewSet(viewsets.ModelViewSet):
+    _model = Address
+    queryset = _model.objects.all()
+    serializer_class = AddressSerializer
+
+
+class CanadianAddressViewSet(viewsets.ModelViewSet):
+    _model = CanadianAddress
+    queryset = _model.objects.all()
+    serializer_class = CanadianAddressSerializer
+
+
 class ProfileViewSet(viewsets.ModelViewSet):
     _model = Profile
     queryset = _model.objects.all()

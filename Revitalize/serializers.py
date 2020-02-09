@@ -30,6 +30,42 @@ class StringGroupSerializer(serializers.ModelSerializer):
         fields = ModelHelper.serialize(model.__name__)
 
 
+class AddressSerializer(serializers.ModelSerializer):
+    street_address = serializers.SerializerMethodField()
+    city = serializers.SerializerMethodField()
+    province = serializers.SerializerMethodField()
+    postal_code = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Address
+        fields = ModelHelper.serialize(model.__name__)
+        fields.extend(["street_address", "city", "province", "postal_code"])
+
+    def get_street_address(self, a: Address):
+        return a.address.street_address
+
+    def get_city(self, a: Address):
+        return a.address.city
+
+    def get_province(self, a: Address):
+        return a.address.province
+
+    def get_postal_code(self, a: Address):
+        return a.address.postal_code
+
+
+class CanadianAddressSerializer(serializers.ModelSerializer):
+    country = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CanadianAddress
+        fields = ModelHelper.serialize(model.__name__)
+        fields.extend(["country"])
+
+    def get_country(self, ca: CanadianAddress):
+        return ca.base.country
+
+
 class ProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(many=False)
 

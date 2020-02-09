@@ -14,6 +14,10 @@
           <option value="Revitalize.models.QuestionType.question" />
           <option value="Revitalize.models.Response.question" />
           <option value="Revitalize.models.Response.submission" />
+          <option value="Revitalize.models.QuestionType.group" />
+          <option value="Revitalize.models.ResponseType.submission" />
+          <option value="Revitalize.models.ResponseType.question" />
+          <option value="Scripts.load_surveys.surveys" />
         </list>
       </option>
     </inspection_tool>
