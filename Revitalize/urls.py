@@ -27,6 +27,9 @@ router.register('submissions', SubmissionViewSet)
 router.register('responses_text', TextResponseViewSet)
 router.register('responses_int', IntResponseViewSet)
 router.register('responses_float', FloatResponseViewSet)
+router.register('indicators', IndicatorViewSet)
+router.register('data_points_int', IntDataPointViewSet)
+router.register('data_points_float', FloatDataPointViewSet)
 
 urlpatterns = [
         path('', include(router.urls)),

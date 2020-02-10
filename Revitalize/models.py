@@ -544,6 +544,10 @@ class QuestionGroup(FormElement):
     help_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='question_groups_h',
                                   help_text="The help text of this question.")
 
+    screen_reader_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True,
+                                           related_name='question_groups_sr',
+                                           help_text="The help text of this question.")
+
     # Used for units, format hints, etc.
     annotations = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
                                     validators=[validate_json], related_name='question_groups',
@@ -559,6 +563,7 @@ class QuestionGroup(FormElement):
     ModelHelper.register(_name, 'form', 85, to_serialize=False, foreign=Form)
     ModelHelper.register(_name, 'text', 75, foreign=Text)
     ModelHelper.register(_name, 'help_text', 74, foreign=Text)
+    ModelHelper.register(_name, 'screen_reader_text', 73, foreign=Text)
     ModelHelper.register(_name, 'annotations', 70)
 
     def questions(self):
@@ -628,6 +633,9 @@ class Question(Displayable):
     help_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='questions_h',
                                   help_text="The help text of this question.")
 
+    screen_reader_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='questions_sr',
+                                           help_text="The help text of this question.")
+
     # Used for units, format hints, etc.
     annotations = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
                                     validators=[validate_json], related_name='questions',
@@ -644,6 +652,7 @@ class Question(Displayable):
     ModelHelper.register(_name, 'number', 80)
     ModelHelper.register(_name, 'text', 75, foreign=Text)
     ModelHelper.register(_name, 'help_text', 74, foreign=Text)
+    ModelHelper.register(_name, 'screen_reader_text', 73, foreign=Text)
     ModelHelper.register(_name, 'annotations', 70)
     ModelHelper.register(_name, 'optional', 65, )
 
@@ -916,13 +925,15 @@ class Submission(ModelBase):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, related_name='submissions')
     form = models.ForeignKey(Form, on_delete=models.SET_NULL, null=True, related_name='submissions')
 
-    time = models.DateTimeField(null=False)
+    time = models.DateTimeField(null=False, db_index=True)
 
     # Intentionally not validated
     raw_data = models.TextField(blank=False, help_text="This should be a JSON.")
 
     # Should be set when validated
     validated = models.BooleanField(blank=False, default=False)
+    parsed = models.BooleanField(blank=False, default=False)
+    processed = models.BooleanField(blank=False, default=False)
 
     notes = models.TextField(blank=True, null=False)
 
@@ -937,6 +948,9 @@ class Submission(ModelBase):
     ModelHelper.register(_name, 'time', 75, to_filter=True)
     ModelHelper.register(_name, 'raw_data', 60, False, text_type='JSON')
     ModelHelper.register(_name, 'notes', 30, to_serialize=False)
+    ModelHelper.register(_name, 'validated', 10, False, to_serialize=False, to_search=True)
+    ModelHelper.register(_name, 'parsed', 10, False, to_serialize=False, to_search=True)
+    ModelHelper.register(_name, 'processed', 10, False, to_serialize=False, to_search=True)
 
 
 class ResponseType(ModelBase):
@@ -1051,6 +1065,75 @@ class FloatResponse(ResponseType):
     ModelHelper.inherit(_parent, _name)
     ModelHelper.register(_name, 'submission', 85, foreign=Submission)
     ModelHelper.register(_name, 'question', 85, foreign=Question)
+    ModelHelper.register(_name, 'value', 75, to_filter=True, to_search=True)
+
+
+class Indicator(Displayable):
+    _name = 'Indicator'  # internal name
+    _parent = 'Displayable'  # internal name
+
+    # Determined by above
+    class DataType(models.TextChoices):
+        UNKNOWN = '?', _('Unknown')
+        INT = 'I', _('Integer')
+        FLOAT = 'D', _('Decimal')
+
+    type = models.CharField(max_length=1, blank=False, choices=DataType.choices, default=DataType.UNKNOWN)
+    ModelHelper.register(_name, 'type', 85, to_filter=True, to_search=True)
+
+
+class IndicatorDataPoint(Displayable):
+    _name = 'IndicatorDataPoint'  # internal name
+    _parent = 'Displayable'  # internal name
+
+    time = models.DateTimeField(null=False, db_index=True)
+
+    # Should be set when validated
+    validated = models.BooleanField(blank=False, default=False)
+    processed = models.BooleanField(blank=False, default=False)
+
+    notes = models.TextField(blank=True, null=False)
+
+    class Meta:
+        abstract = True
+
+    ModelHelper.register(_name, 'time', 75, to_filter=True)
+    ModelHelper.register(_name, 'notes', 30, to_serialize=False)
+    ModelHelper.register(_name, 'validated', 10, False, to_serialize=False, to_search=True)
+    ModelHelper.register(_name, 'processed', 10, False, to_serialize=False, to_search=True)
+
+
+class IntDataPoint(IndicatorDataPoint):
+    _name = 'IntDataPoint'  # internal name
+    _parent = 'IndicatorDataPoint'  # internal name
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, related_name='int_data_points')
+
+    indicator = models.ForeignKey(Indicator, on_delete=models.SET_NULL, null=True, related_name='int_data_points')
+    value = models.IntegerField(null=False)
+
+    # Optional submission which triggered this point
+    source = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True, related_name='int_data_points')
+
+    ModelHelper.register(_name, 'user', 85, foreign=User)
+    ModelHelper.register(_name, 'indicator', 85, foreign=Indicator)
+    ModelHelper.register(_name, 'value', 75, to_filter=True, to_search=True)
+
+
+class FloatDataPoint(IndicatorDataPoint):
+    _name = 'FloatDataPoint'  # internal name
+    _parent = 'IndicatorDataPoint'  # internal name
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, related_name='float_data_points')
+
+    indicator = models.ForeignKey(Indicator, on_delete=models.SET_NULL, null=True, related_name='float_data_points')
+    value = models.FloatField(null=False)
+
+    # Optional submission which triggered this point
+    source = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True, related_name='float_data_points')
+
+    ModelHelper.register(_name, 'user', 85, foreign=User)
+    ModelHelper.register(_name, 'indicator', 85, foreign=Indicator)
     ModelHelper.register(_name, 'value', 75, to_filter=True, to_search=True)
 
 # TODO send messages with validation to explain failure?

@@ -265,6 +265,24 @@ class FloatResponseViewSet(viewsets.ModelViewSet):
     queryset = _model.objects.all()
 
 
+class IndicatorViewSet(viewsets.ModelViewSet):
+    _model = Indicator
+    serializer_class = IndicatorSerializer
+    queryset = _model.objects.all()
+
+
+class IntDataPointViewSet(viewsets.ModelViewSet):
+    _model = IntDataPoint
+    serializer_class = IntDataPointSerializer
+    queryset = _model.objects.all()
+
+
+class FloatDataPointViewSet(viewsets.ModelViewSet):
+    _model = FloatDataPoint
+    serializer_class = FloatDataPointSerializer
+    queryset = _model.objects.all()
+
+
 class AvailableSurveyViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Survey.objects.all()
     serializer_class = AvailableSurveySerializer

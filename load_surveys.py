@@ -1,9 +1,11 @@
-from Revitalize.models import *
+import Revitalize.models
 
 # To load this run:
 # python ./manage.py shell
 # Then enter:
 # exec(open("./load_surveys.py").read())
+
+debug = False
 
 semcd6 = {
         "tag"        : "SEMCD6",
@@ -567,21 +569,19 @@ rand36 = {
 
 survey_list = [semcd6, rand36]
 
-debug = False
-
 def _s(s: str):
     if debug: print(f"_s({s})")
-    return String.objects.create(value=s) if s is not None else None
+    return Revitalize.models.String.objects.create(value=s) if s is not None else None
 
 
 def _t(s: str):
     if debug: print(f"_t({s})")
-    return Text.objects.create(value=s) if s is not None else None
+    return Revitalize.models.Text.objects.create(value=s) if s is not None else None
 
 
 def _g(s: str):
     if debug: print(f"_g({s})")
-    return StringGroup.objects.create(value=s) if s is not None and s not in ["{}"] else None
+    return Revitalize.models.StringGroup.objects.create(value=s) if s is not None and s not in ["{}"] else None
 
 
 def _k(s: dict, key, default=None):
@@ -604,13 +604,13 @@ def _d(s: dict, pre: str = "", default=""):
 def _a(s: dict, pre: str = "", default=None):
     if debug: print(f"_a({pre}, {default})")
     temp = _k(s, "annotations", default)
-    return _g(pre + json.dumps(temp)) if temp is not None else default
+    return _g(pre + Revitalize.models.json.dumps(temp)) if temp is not None else default
 
 
 def _l(s: dict, pre: str = "", default=None):
     if debug: print(f"_l({pre}, {default})")
     temp = _k(s, "labels", default)
-    return _g(pre + json.dumps(temp)) if temp is not None else default
+    return _g(pre + Revitalize.models.json.dumps(temp)) if temp is not None else default
 
 
 def _b(q: dict, key: str, default):
@@ -640,21 +640,21 @@ def _qty(g: dict):
     type = None
 
     if g["question_group_type"] == "text":
-        type = QuestionGroup.DataType.TEXT.value
+        type = Revitalize.models.QuestionGroup.DataType.TEXT.value
     elif g["question_group_type"] == "int":
-        type = QuestionGroup.DataType.INT.value
+        type = Revitalize.models.QuestionGroup.DataType.INT.value
     elif g["question_group_type"] == "float":
-        type = QuestionGroup.DataType.FLOAT.value
+        type = Revitalize.models.QuestionGroup.DataType.FLOAT.value
     elif g["question_group_type"] == "integer_range":
-        type = QuestionGroup.DataType.INT_RANGE.value
+        type = Revitalize.models.QuestionGroup.DataType.INT_RANGE.value
     elif g["question_group_type"] == "boolean":
-        type = QuestionGroup.DataType.BOOLEAN.value
+        type = Revitalize.models.QuestionGroup.DataType.BOOLEAN.value
     elif g["question_group_type"] == "exclusive_choices":
-        type = QuestionGroup.DataType.EXCLUSIVE.value
+        type = Revitalize.models.QuestionGroup.DataType.EXCLUSIVE.value
     elif g["question_group_type"] == "multi_choices":
-        type = QuestionGroup.DataType.CHOICES.value
+        type = Revitalize.models.QuestionGroup.DataType.CHOICES.value
     elif g["question_group_type"] == "float_range":
-        type = QuestionGroup.DataType.FLOAT_RANGE.value
+        type = Revitalize.models.QuestionGroup.DataType.FLOAT_RANGE.value
 
     return {
             "type": type
@@ -721,9 +721,9 @@ def _qnd(q: dict, tag: str, n: int, m: int):
 def load_survey(s: dict):
     tag: str = s["tag"]
 
-    form = Form.objects.create(type=Form.FormType.SURVEY.value, tag=tag, **_nd(s))
+    form = Revitalize.models.Form.objects.create(type=Revitalize.models.Form.FormType.SURVEY.value, tag=tag, **_nd(s))
 
-    survey = Survey.objects.create(form=form)
+    survey = Revitalize.models.Survey.objects.create(form=form)
 
     print(f"created: {form}")
 
@@ -737,11 +737,11 @@ def load_survey(s: dict):
         qtype = None
         if e["element_type"] == "text":
             print(f"starting #{n}: text")
-            element = TextElement.objects.create(form=form, **_end(e, tag, n))
+            element = Revitalize.models.TextElement.objects.create(form=form, **_end(e, tag, n))
         elif e["element_type"] == "question_group":
             print(f"starting #{n}: question group " + e["question_group_type"])
             d = _k(e, "question_group_type_data", {})
-            element = QuestionGroup.objects.create(form=form, **_end(e, tag, n), **_qty(e), annotations=_a(d))
+            element = Revitalize.models.QuestionGroup.objects.create(form=form, **_end(e, tag, n), **_qty(e), annotations=_a(d))
 
             if e["question_group_type"] == "text":
                 pass
@@ -750,11 +750,11 @@ def load_survey(s: dict):
             elif e["question_group_type"] == "float":
                 pass
             elif e["question_group_type"] == "integer_range":
-                qtype = IntRangeQuestion.objects.create(group=element, **_qir(d))
+                qtype = Revitalize.models.IntRangeQuestion.objects.create(group=element, **_qir(d))
             elif e["question_group_type"] == "boolean":
-                qtype = BooleanChoiceQuestion.objects.create(group=element, **_qbl(d))
+                qtype = Revitalize.models.BooleanChoiceQuestion.objects.create(group=element, **_qbl(d))
             elif e["question_group_type"] == "exclusive_choices":
-                qtype = ExclusiveChoiceQuestion.objects.create(group=element, **_qxc(d))
+                qtype = Revitalize.models.ExclusiveChoiceQuestion.objects.create(group=element, **_qxc(d))
             elif e["question_group_type"] == "multi_choices":
                 pass
             elif e["question_group_type"] == "float_range":
@@ -764,7 +764,7 @@ def load_survey(s: dict):
             questions = []
             for q in _k(e, "questions", []):
                 print(f"starting #{n}.{m}")
-                question = Question.objects.create(group=element, **_qnd(q, tag, n, m))
+                question = Revitalize.models.Question.objects.create(group=element, **_qnd(q, tag, n, m))
                 elements.append(element)
                 print(f"created #{m}: {question}")
                 questions.append(question)

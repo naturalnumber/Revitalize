@@ -156,16 +156,28 @@ class FloatRangeQuestionSerializer(serializers.ModelSerializer):
 
 class QuestionSerializer(serializers.ModelSerializer):
     # Nameable
-    name = StringSerializer(many=False)
-    description = TextSerializer(many=False)
+    name = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
 
     # group = QuestionGroupSerializer(many=False)
-    text = TextSerializer(many=False)
-    annotations = StringGroupSerializer(many=False)
+    text = serializers.SerializerMethodField()
+    annotations = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
         fields = ModelHelper.serialize(model.__name__)
+
+    def get_name(self, n: Nameable):
+        return n.name.value
+
+    def get_description(self, n: Nameable):
+        return n.description.value
+
+    def get_text(self, q: Question):
+        return q.text.value
+
+    def get_annotations(self, q: Question):
+        return q.annotations.value
 
 
 # Elements
@@ -186,12 +198,13 @@ class TextElementSerializer(serializers.ModelSerializer):
 
 class QuestionGroupSerializer(serializers.ModelSerializer):
     # Nameable
-    name = StringSerializer(many=False)
-    description = TextSerializer(many=False)
+    name = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
 
-    # form = FormSerializer(many=False)
-    text = TextSerializer(many=False)
-    annotations = StringGroupSerializer(many=False)
+    # group = QuestionGroupSerializer(many=False)
+    text = serializers.SerializerMethodField()
+    annotations = serializers.SerializerMethodField()
+
     questions = QuestionSerializer(many=True)
     question_data = serializers.SerializerMethodField()
 
@@ -200,6 +213,18 @@ class QuestionGroupSerializer(serializers.ModelSerializer):
         fields = ModelHelper.serialize(model.__name__)
         fields.extend(['questions'])
         fields.extend(['question_data'])
+
+    def get_name(self, n: Nameable):
+        return n.name.value
+
+    def get_description(self, n: Nameable):
+        return n.description.value
+
+    def get_text(self, q: QuestionGroup):
+        return q.text.value
+
+    def get_annotations(self, q: QuestionGroup):
+        return q.annotations.value
 
     def get_question_data(self, qg: QuestionGroup):
         data = qg.data()
@@ -313,3 +338,41 @@ class FloatResponseSerializer(serializers.ModelSerializer):
     class Meta:
         model = FloatResponse
         fields = ModelHelper.serialize(model.__name__)
+
+
+class IndicatorSerializer(serializers.ModelSerializer):
+    # Nameable
+    name = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FloatResponse
+        fields = ModelHelper.serialize(model.__name__)
+
+    def get_name(self, n: Nameable):
+        return n.name.value
+
+    def get_description(self, n: Nameable):
+        return n.description.value
+
+
+class IntDataPointSerializer(serializers.ModelSerializer):
+    # profile = ProfileSerializer(many=False)
+    user = UserSerializer(many=False)
+    indicator = IndicatorSerializer(many=False)
+
+    class Meta:
+        model = IntDataPoint
+        fields = ModelHelper.serialize(model.__name__)
+        fields.extend(['id'])
+
+
+class FloatDataPointSerializer(serializers.ModelSerializer):
+    # profile = ProfileSerializer(many=False)
+    user = UserSerializer(many=False)
+    indicator = IndicatorSerializer(many=False)
+
+    class Meta:
+        model = FloatDataPoint
+        fields = ModelHelper.serialize(model.__name__)
+        fields.extend(['id'])
