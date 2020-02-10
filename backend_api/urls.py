@@ -19,8 +19,9 @@ from rest_framework_simplejwt.views import (TokenObtainPairView, TokenRefreshVie
 
 urlpatterns = [
         path('admin/', admin.site.urls),
-        path('revitalize/', include('Revitalize.urls')),
+        path('api/', include('Revitalize.urls')),
+        # TODO could these be put in the Revitalize urls.py?
         # Authentication : https://github.com/davesque/django-rest-framework-simplejwt
-        path('revitalize/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-        path('revitalize/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+        path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+        path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
