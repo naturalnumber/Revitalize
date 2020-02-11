@@ -15,8 +15,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from rest_framework_simplejwt.views import (TokenObtainPairView, TokenRefreshView)
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-        path('revitalize', include('Revitalize.urls'))
+        path('admin/', admin.site.urls),
+        path('api/', include('Revitalize.urls')),
+        # TODO could these be put in the Revitalize urls.py?
+        # Authentication : https://github.com/davesque/django-rest-framework-simplejwt
+        path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+        path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]

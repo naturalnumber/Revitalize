@@ -1,3 +1,28 @@
 from django.contrib import admin
 
-# Register your models here.
+from Revitalize.models import *
+
+admin.site.register(Text)
+admin.site.register(String)
+admin.site.register(StringGroup)
+admin.site.register(Profile)
+admin.site.register(Form)
+admin.site.register(Survey)
+admin.site.register(TextElement)
+admin.site.register(QuestionGroup)
+admin.site.register(Question)
+admin.site.register(TextQuestion)
+admin.site.register(IntQuestion)
+admin.site.register(FloatQuestion)
+admin.site.register(IntRangeQuestion)
+admin.site.register(FloatRangeQuestion)
+admin.site.register(BooleanChoiceQuestion)
+admin.site.register(ExclusiveChoiceQuestion)
+admin.site.register(MultiChoiceQuestion)
+admin.site.register(Submission)
+admin.site.register(TextResponse)
+admin.site.register(IntResponse)
+admin.site.register(FloatResponse)
+admin.site.register(Indicator)
+admin.site.register(IntDataPoint)
+admin.site.register(FloatDataPoint)
