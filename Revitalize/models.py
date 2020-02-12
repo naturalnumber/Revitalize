@@ -23,6 +23,15 @@ def pre_validate_json(j: str):
         raise ValidationError(e)
 
 
+class LangCode(models.TextChoices):
+    UNKNOWN = '?', _('Unknown')
+    ENGLISH = 'EN', _('English')
+
+
+def _str(entry, lang=LangCode.ENGLISH, default=None):
+    return entry.value if entry is not None else default
+
+
 class ModelHelper:
     model_fields: dict = {}
     model_sorts: dict = {}
@@ -103,14 +112,14 @@ class ModelHelper:
         return temp
 
 
-class Text(models.Model):
-    _name = 'Text'  # internal name
+class String(models.Model):
+    _name = 'String'  # internal name
 
     id = models.BigAutoField(editable=False, primary_key=True)
-    value = models.TextField(blank=False, help_text="The English value.")
+    value = models.CharField(max_length=100, blank=False, help_text="The English value.")
 
     def __str__(self):
-        return self.value[0:min(len(self.value), 12)] + ("" if len(self.value) < 15 else "...") + f" ({self.id})"
+        return self.value + f" ({self.id})"
 
     # Delegate to contained string
     def __len__(self):
@@ -125,14 +134,14 @@ class Text(models.Model):
     ModelHelper.register(_name, 'value', 75, to_search=True)
 
 
-class String(models.Model):
-    _name = 'String'  # internal name
+class Text(models.Model):
+    _name = 'Text'  # internal name
 
     id = models.BigAutoField(editable=False, primary_key=True)
-    value = models.CharField(max_length=100, blank=False, help_text="The English value.")
+    value = models.TextField(blank=False, help_text="The English value.")
 
     def __str__(self):
-        return self.value + f" ({self.id})"
+        return self.value[0:min(len(self.value), 12)] + ("" if len(self.value) < 15 else "...") + f" ({self.id})"
 
     # Delegate to contained string
     def __len__(self):
@@ -491,6 +500,8 @@ class TextElement(FormElement):
     _name = 'TextElement'  # internal name
     _parent = 'FormElement'  # internal name
 
+    element_type = "text"
+
     # can't inherit
     form = models.ForeignKey(Form, on_delete=models.SET_NULL, null=True, related_name='text_elements', db_index=True)
 
@@ -499,6 +510,9 @@ class TextElement(FormElement):
 
     help_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='text_elements_h',
                                   help_text="The help text of this question.")
+
+    screen_reader_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='text_elements_sr',
+                                  help_text="The screen reader text of this question.")
 
     class Meta:
         unique_together = (('form', 'number'),)
@@ -513,6 +527,8 @@ class TextElement(FormElement):
 class QuestionGroup(FormElement):
     _name = 'QuestionGroup'  # internal name
     _parent = 'FormElement'  # internal name
+
+    element_type = "question"
 
     class DataType(models.TextChoices):
         UNKNOWN = '?', _('Unknown')
@@ -542,11 +558,11 @@ class QuestionGroup(FormElement):
                              help_text="The text of this question group.")
 
     help_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='question_groups_h',
-                                  help_text="The help text of this question.")
+                                  help_text="The help text of this question group.")
 
     screen_reader_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True,
                                            related_name='question_groups_sr',
-                                           help_text="The help text of this question.")
+                                           help_text="The screen reader text of this question group.")
 
     # Used for units, format hints, etc.
     annotations = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
@@ -566,7 +582,7 @@ class QuestionGroup(FormElement):
     ModelHelper.register(_name, 'screen_reader_text', 73, foreign=Text)
     ModelHelper.register(_name, 'annotations', 70)
 
-    def questions(self):
+    def get_questions(self):
         return Question.objects.filter(group=self.pk)
 
     @staticmethod
@@ -625,7 +641,7 @@ class Question(Displayable):
     optional = models.BooleanField(null=False, default=False)
 
     group = models.ForeignKey(QuestionGroup, on_delete=models.SET_NULL, null=True,
-                              related_name='inputs', db_index=True)
+                              related_name='questions', db_index=True)
 
     text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='questions',
                              help_text="The text of this question.")
@@ -686,6 +702,8 @@ class TextQuestion(SingleInputQuestion):
     _name = 'TextQuestion'  # internal name
     _parent = 'SingleInputQuestion'  # internal name
 
+    question_group_type = "text"
+
     min_length = models.IntegerField(null=False)
     max_length = models.IntegerField(null=False)
 
@@ -706,6 +724,8 @@ class TextQuestion(SingleInputQuestion):
 class IntQuestion(SingleInputQuestion):
     _name = 'IntQuestion'  # internal name
     _parent = 'SingleInputQuestion'  # internal name
+
+    question_group_type = "integer"
 
     min = models.IntegerField(null=False)
     max = models.IntegerField(null=False)
@@ -729,6 +749,8 @@ class IntQuestion(SingleInputQuestion):
 class FloatQuestion(SingleInputQuestion):
     _name = 'FloatQuestion'  # internal name
     _parent = 'SingleInputQuestion'  # internal name
+
+    question_group_type = "decimal"
 
     min = models.FloatField(null=False)
     max = models.FloatField(null=False)
@@ -769,6 +791,8 @@ class IntRangeQuestion(FiniteChoiceQuestion):
     _name = 'IntRangeQuestion'  # internal name
     _parent = 'FiniteChoiceQuestion'  # internal name
 
+    question_group_type = "integer_range"
+
     min = models.IntegerField(null=False)
     max = models.IntegerField(null=False)
     step = models.IntegerField(null=False, default=1)
@@ -797,6 +821,8 @@ class BooleanChoiceQuestion(FiniteChoiceQuestion):
     _name = 'BooleanChoiceQuestion'  # internal name
     _parent = 'FiniteChoiceQuestion'  # internal name
 
+    question_group_type = "boolean"
+
     labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
                                related_name='boolean_choice_questions',
                                help_text="The labels of this question's categories.")
@@ -820,6 +846,8 @@ class ExclusiveChoiceQuestion(FiniteChoiceQuestion):
     _name = 'ExclusiveChoiceQuestion'  # internal name
     _parent = 'FiniteChoiceQuestion'  # internal name
 
+    question_group_type = "exclusive_choices"
+
     labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
                                related_name='exclusive_choice_questions',
                                help_text="The labels of this question's categories.")
@@ -840,6 +868,8 @@ class ExclusiveChoiceQuestion(FiniteChoiceQuestion):
 class MultiChoiceQuestion(FiniteChoiceQuestion):
     _name = 'MultiChoiceQuestion'  # internal name
     _parent = 'FiniteChoiceQuestion'  # internal name
+
+    question_group_type = "multi_choices"
 
     min_choices = models.IntegerField(null=False)
     max_choices = models.IntegerField(null=False)
@@ -893,6 +923,8 @@ class ContinuousChoiceQuestion(QuestionType):
 class FloatRangeQuestion(ContinuousChoiceQuestion):
     _name = 'FloatRangeQuestion'  # internal name
     _parent = 'FiniteChoiceQuestion'  # internal name
+
+    question_group_type = "decimal_range"
 
     min = models.FloatField(null=False)
     max = models.FloatField(null=False)
