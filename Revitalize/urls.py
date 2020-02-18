@@ -5,6 +5,8 @@ from Revitalize.views import *
 
 router = routers.DefaultRouter()
 
+# TODO: are these showing the proper urls when doing '/api/'
+
 router.register('text', TextViewSet)
 router.register('strings', StringViewSet)
 router.register('string_groups', StringGroupViewSet)
