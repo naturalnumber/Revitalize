@@ -641,3 +641,9 @@ class UserSurveyHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Submission
         fields = ModelHelper.serialize(model.__name__)
+
+
+class ProfileRetrievalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ModelHelper.serialize(model.__name__)

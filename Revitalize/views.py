@@ -291,3 +291,8 @@ class AvailableSurveyViewSet(viewsets.ReadOnlyModelViewSet):
 class UserSurveyHistoryViewSet(viewsets.ModelViewSet):
     queryset = Submission.objects.all()
     serializer_class = UserSurveyHistorySerializer
+
+
+class ProfileRetrievalViewSet(viewsets.ModelViewSet):
+    queryset = Profile.objects.all()
+    serializer_class = ProfileRetrievalSerializer
