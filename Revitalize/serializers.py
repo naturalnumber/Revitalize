@@ -647,3 +647,9 @@ class ProfileRetrievalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = ModelHelper.serialize(model.__name__)
+
+
+class UserIndicatorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Indicator
+        fields = ModelHelper.serialize(model.__name__)

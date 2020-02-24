@@ -296,3 +296,8 @@ class UserSurveyHistoryViewSet(viewsets.ModelViewSet):
 class ProfileRetrievalViewSet(viewsets.ModelViewSet):
     queryset = Profile.objects.all()
     serializer_class = ProfileRetrievalSerializer
+
+
+class UserIndicatorViewSet(viewsets.ModelViewSet):
+    queryset = Indicator.objects.all()
+    serializer_class = UserIndicatorSerializer
