@@ -1,3 +1,5 @@
+from itertools import chain
+
 from rest_framework import serializers
 from rest_framework.serializers import ListSerializer
 
@@ -500,6 +502,19 @@ class FloatRangeQuestionSerializerDisplay(serializers.ModelSerializer):
         fields = ModelHelper.serialize(model.__name__)
 
 
+class ElementSerializerDisplay(serializers.ModelSerializer):
+    @classmethod
+    def get_serializer(cls, model):
+        if model == TextElement:
+            return TextElementSerializerDisplay
+        elif model == QuestionGroup:
+            return QuestionGroupSerializerDisplay
+
+    def to_representation(self, instance):
+        serializer = self.get_serializer(instance.__class__)
+        return serializer(instance, context=self.context).data
+
+
 class TextElementSerializerDisplay(serializers.ModelSerializer):
     element_type = serializers.SerializerMethodField()
 
@@ -576,7 +591,7 @@ class QuestionGroupSerializerDisplay(serializers.ModelSerializer):
         return qg.questions.count()
 
     def get_questions(self, qg: QuestionGroup):
-        return QuestionSerializerDisplay(qg.questions.order_by('number'), many=True)
+        return QuestionSerializerDisplay(qg.questions.order_by('number'), many=True).data
 
     def get_question_group_type_data(self, qg: QuestionGroup):  # TODO
         data = qg.data()
@@ -616,21 +631,90 @@ class FormSerializerDisplay(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'type', 'display', 'elements']
 
     def get_elements(self, f: Form):
+        elements = sorted(chain(f.text_elements.order_by('number').all(),
+                             f.question_groups.order_by('number').all()),
+                       key=lambda e: e.number
+                       )
+
+        # print(elements)
+
+        ser = ElementSerializerDisplay(elements, many=True)
+
+        # print(ser.is_valid())
+
+        return ser.data
+
+        # elements = []
+        #
+        # text_elements = f.text_elements.order_by('number').all()
+        #
+        # for te in text_elements:
+        #     print(te)
+        #     elements.append((te.number, TextElementSerializerDisplay(te, many=False).data))
+        #     print(f"te #{te.number} = {TextElementSerializerDisplay(te, many=False).data}")
+        #
+        # question_groups = f.question_groups.order_by('number').all()
+        #
+        # for qg in question_groups:
+        #     print(qg)
+        #     elements.append((qg.number, QuestionGroupSerializerDisplay(qg, many=False).data))
+        #     print(f"te #{qg.number} = {QuestionGroupSerializerDisplay(qg, many=False).data}")
+
+        #elements.sort(key=lambda e: e[0])
+
+        #serialized_elements = [str(e[0]) for e in elements]
+
+        #serialized = "["
+
+        #for s in serialized_elements:
+         #   serialized += s
+         #   serialized += ','
+
+        #serialized += ']'
+
+        #return "test" # serialized
+
+
+class FormSerializerDisplay2(serializers.ModelSerializer):
+    name = StringSerializer(many=False)
+    description = TextSerializer(many=False)
+    elements = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Form
+        fields = ['id', 'name', 'description', 'type', 'display', 'elements']
+
+    def get_elements(self, f: Form):
+
         elements = []
-
+       
         text_elements = f.text_elements.order_by('number').all()
-
+       
         for te in text_elements:
-            elements.append((te.number, TextElementSerializerDisplay(te, many=False)))
-
+            print(te)
+            elements.append((te.number, TextElementSerializerDisplay(te, many=False).data))
+            print(f"te-#{te.number} = {TextElementSerializerDisplay(te, many=False).data}")
+       
         question_groups = f.question_groups.order_by('number').all()
-
+       
         for qg in question_groups:
-            elements.append((qg.number, QuestionGroupSerializerDisplay(qg, many=False)))
+            print(qg)
+            elements.append((qg.number, QuestionGroupSerializerDisplay(qg, many=False).data))
+            print(f"qg-#{qg.number} = {QuestionGroupSerializerDisplay(qg, many=False).data}")
 
         elements.sort(key=lambda e: e[0])
 
-        return ListSerializer([e[1] for e in elements])
+        serialized_elements = [e[1] for e in elements]
+
+        serialized = "["
+
+        for s in serialized_elements:
+            serialized += s
+            serialized += ','
+
+        serialized += ']'
+
+        return serialized
 
 
 class SurveySerializerDisplay(serializers.ModelSerializer):
