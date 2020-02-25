@@ -181,3 +181,10 @@ dmypy.json
 /venv/
 revitalize/__pycache__/
 templates/
+
+.idea/revitalize.iml
+.idea/misc.xml
+.idea/dataSources.local.xml
+.idea/workspace.xml
+
+ser_test.py
