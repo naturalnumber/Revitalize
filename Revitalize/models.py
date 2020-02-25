@@ -466,7 +466,7 @@ class Survey(ModelBase):
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
     ModelHelper.register(_name, 'prefix', 90)
-    ModelHelper.register(_name, 'form', 85, to_serialize=False, foreign=Form)
+    ModelHelper.register(_name, 'form', 85, foreign=Form)
 
 
 class FormElement(Displayable):
