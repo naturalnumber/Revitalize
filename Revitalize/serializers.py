@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.serializers import ListSerializer
 
 from Revitalize.models import *
 from Revitalize.models import _str
@@ -292,6 +293,15 @@ class SurveySerializer(serializers.ModelSerializer):
     class Meta:
         model = Survey
         fields = ModelHelper.serialize(model.__name__)
+        fields.extend(['id'])
+
+
+class MedicalLabSerializer(serializers.ModelSerializer):
+    form = FormSerializer(many=False)
+
+    class Meta:
+        model = MedicalLab
+        fields = ModelHelper.serialize(model.__name__)
 
 
 # I moved available surveys to near the bottom for better organization
@@ -341,7 +351,7 @@ class IndicatorSerializer(serializers.ModelSerializer):
     description = serializers.SerializerMethodField()
 
     class Meta:
-        model = FloatResponse
+        model = Indicator
         fields = ModelHelper.serialize(model.__name__)
 
     def get_name(self, n: Nameable):
@@ -387,7 +397,7 @@ class QuestionSerializerDisplay(serializers.ModelSerializer):
 
     class Meta:
         model = Question
-        fields = ['number', 'optional', 'text', 'help_text', 'screen_reader_text', 'annotations', 'display']
+        fields = ['id', 'number', 'optional', 'text', 'help_text', 'screen_reader_text', 'annotations', 'display']
 
     def get_text(self, q: Question):
         return _str(q.text)
@@ -501,7 +511,7 @@ class TextElementSerializerDisplay(serializers.ModelSerializer):
 
     class Meta:
         model = TextElement
-        fields = ["element_type", "number", "text", 'help_text', 'screen_reader_text', 'display']
+        fields = ['id', 'element_type', 'number', 'text', 'help_text', 'screen_reader_text', 'display']
 
     def get_text(self, e: TextElement):
         return _str(e.text)
@@ -534,9 +544,11 @@ class QuestionGroupSerializerDisplay(serializers.ModelSerializer):
 
     number_of_questions = serializers.SerializerMethodField()
 
+    questions = serializers.SerializerMethodField()
+
     class Meta:
         model = QuestionGroup
-        fields = ['element_type', 'number', 'text', 'help_text', 'screen_reader_text', 'question_group_type',
+        fields = ['id', 'element_type', 'number', 'text', 'help_text', 'screen_reader_text', 'question_group_type',
                   'question_group_type_data', 'display', 'number_of_questions', 'questions']
 
     def get_text(self, e: QuestionGroup):
@@ -557,10 +569,8 @@ class QuestionGroupSerializerDisplay(serializers.ModelSerializer):
     def get_element_type(self, e: FormElement):
         return e.element_type
 
-    def get_element_type(self, qg: QuestionGroup):
-        data = qg.data()
-
-        return data.question_group_type
+    def get_question_group_type(self, qg: QuestionGroup):
+        return qg.data_class().question_group_type
 
     def get_number_of_questions(self, qg: QuestionGroup):
         return qg.questions.count()
@@ -599,19 +609,75 @@ class QuestionGroupSerializerDisplay(serializers.ModelSerializer):
 class FormSerializerDisplay(serializers.ModelSerializer):
     name = StringSerializer(many=False)
     description = TextSerializer(many=False)
-    question_groups = QuestionGroupSerializer(many=True)
+    elements = serializers.SerializerMethodField()
 
     class Meta:
         model = Form
-        fields = ['name', 'description', 'type', 'display', 'question_groups']
+        fields = ['id', 'name', 'description', 'type', 'display', 'elements']
+
+    def get_elements(self, f: Form):
+        elements = []
+
+        text_elements = f.text_elements.order_by('number').all()
+
+        for te in text_elements:
+            elements.append((te.number, TextElementSerializerDisplay(te, many=False)))
+
+        question_groups = f.question_groups.order_by('number').all()
+
+        for qg in question_groups:
+            elements.append((qg.number, QuestionGroupSerializerDisplay(qg, many=False)))
+
+        elements.sort(key=lambda e: e[0])
+
+        return ListSerializer([e[1] for e in elements])
 
 
 class SurveySerializerDisplay(serializers.ModelSerializer):
-    form = FormSerializerDisplay(many=False)
+    id = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField()
+    display = serializers.SerializerMethodField()
+    elements = serializers.SerializerMethodField()
 
     class Meta:
         model = Survey
-        fields = ModelHelper.serialize(model.__name__)
+        fields = ['id', 'name', 'description', 'type', 'display', 'elements']
+
+    def get_id(self, s: Survey):
+        return s.form.id
+
+    def get_name(self, s: Survey):
+        return _str(s.form.name)
+
+    def get_description(self, s: Survey):
+        return _str(s.form.description)
+
+    def get_type(self, s: Survey):
+        return s.form.type
+
+    def get_display(self, s: Survey):
+        return s.form.display
+
+    def get_elements(self, s: Survey):
+        f = s.form
+
+        elements = []
+
+        text_elements = f.text_elements.order_by('number').all()
+
+        for te in text_elements:
+            elements.append((te.number, TextElementSerializerDisplay(te, many=False)))
+
+        question_groups = f.question_groups.order_by('number').all()
+
+        for qg in question_groups:
+            elements.append((qg.number, QuestionGroupSerializerDisplay(qg, many=False)))
+
+        elements.sort(key=lambda e: e[0])
+
+        return ListSerializer([e[1] for e in elements])
 
 
 # Endpoint related

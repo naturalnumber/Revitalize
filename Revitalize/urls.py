@@ -10,7 +10,8 @@ router.register('strings', StringViewSet)
 router.register('string_groups', StringGroupViewSet)
 router.register('profiles', ProfileViewSet)
 router.register('forms', FormViewSet)
-router.register('surveys', SurveyViewSet)
+router.register('surveys', SurveyViewSetFrontEnd)
+router.register('medical_labs', MedicalLabViewSetFrontEnd)
 router.register('available_surveys', AvailableSurveyViewSet)
 router.register('text_elements', TextElementViewSet)
 router.register('question_groups', QuestionGroupViewSet)
@@ -30,6 +31,11 @@ router.register('responses_float', FloatResponseViewSet)
 router.register('indicators', IndicatorViewSet)
 router.register('data_points_int', IntDataPointViewSet)
 router.register('data_points_float', FloatDataPointViewSet)
+
+# For debugging
+router.register('surveys_d', SurveyViewSetAll)
+router.register('surveys_0', SurveyViewSet)
+router.register('medical_labs_0', MedicalLabViewSet)
 
 urlpatterns = [
         path('', include(router.urls)),

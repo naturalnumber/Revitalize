@@ -1,12 +1,13 @@
+from datetime import datetime
 from json import JSONDecodeError
 
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-# This class is just a helper for dealing with some Django features quickly during development
-# and will at some point be removed. Please ignore.
 from rest_framework.exceptions import ValidationError
 from rest_framework.utils import json
+
+from Revitalize.data_analysis_system import DataAnalysisSystem
 
 
 def validate_json(j: str):
@@ -32,6 +33,8 @@ def _str(entry, lang=LangCode.ENGLISH, default=None):
     return entry.value if entry is not None else default
 
 
+# This class is just a helper for dealing with some Django features quickly during development
+# and will at some point be removed. Please ignore.
 class ModelHelper:
     model_fields: dict = {}
     model_sorts: dict = {}
@@ -398,6 +401,8 @@ class Processable(Nameable):
                                      help_text="This should be a JSON containing a specification of this entry.")
 
     # This will be used by the data analysis/processing subsystems
+    # It is vitally important that no external input is passed to this JSON as it is impossible to fully prevent
+    # certain (obscure) attacks.
     analysis = models.TextField(blank=False, default="{}", validators=[validate_json],
                                 help_text="This should be a JSON containing the analysis hooks for this entry.")
 
@@ -408,6 +413,112 @@ class Processable(Nameable):
     ModelHelper.inherit(_parent, _name)
     ModelHelper.register(_name, 'specification', 27, False, to_serialize=False, text_type='JSON')
     ModelHelper.register(_name, 'analysis', 27, False, to_serialize=False, text_type='JSON')
+
+    @staticmethod
+    def validate_calculation(calculation: str):
+        if calculation is None or not isinstance(calculation, str):
+            raise ValidationError("Not a string.")
+
+        if calculation.find('__') != -1:
+            raise ValidationError("Calculations may not contain __")
+
+    def analyse(self, user: User, time: datetime, data: dict, source: 'Submission', testing=False):
+        analysis: dict = json.loads(self.analysis)
+
+        points = []  # Possibly needed for recursion
+        debug = []
+
+        if 'outputs' in analysis.keys():
+            for out in analysis['outputs']:
+                if not isinstance(out, dict):
+                    debug.append(('outputs', out, "Not a dictionary"))
+                    continue
+
+                out: dict
+
+                if 'type' not in out.keys():
+                    debug.append(('outputs', out, "Unknown type"))
+                    continue
+
+                if out['type'] == Indicator.internal_name:
+
+                    if 'calculation' not in out.keys():
+                        debug.append(('outputs', out, "No calculation provided"))
+                        continue
+
+                    calculation: str = out['calculation']
+
+                    if calculation is None or not isinstance(calculation, str):
+                        debug.append(('outputs', out, "Invalid calculation", calculation))
+                        continue
+
+                    # This is here to prevent certain types of injections that should never be possible
+                    if calculation.find('__'):
+                        debug.append(('outputs', out, "Calculations may not contain __", calculation))
+                        continue
+
+                    if 'id' not in out.keys():
+                        debug.append(('outputs', out, "No indicator id"))
+                        continue
+
+                    ind_id = out['id']
+
+                    try:
+                        indicator = Indicator.objects.get(id=ind_id)
+                        if indicator is None:
+                            debug.append(('output_indicators', ind_id, "Indicator not found"))
+                            continue
+
+                        # May need dynamic data addition here...
+
+                        value = DataAnalysisSystem.process(calculation, data)
+
+                        if value is None:
+                            debug.append(('output_indicators', ind_id, "No value"))
+                            continue
+
+                        if not isinstance(value, int) and not isinstance(value, float):
+                            debug.append(('output_indicators', ind_id, "Invalid value type", value))
+                            continue
+
+                        # This should be unnecessary, but is prudent
+                        if indicator.is_int():
+                            value = int(value)
+                        elif indicator.is_float():
+                            value = float(value)
+
+                        valid = indicator.validate(value)
+
+                        if not valid:
+                            debug.append(('output_indicators', ind_id, "Value failed to validate", value))
+                            continue
+
+                        point = None
+
+                        if testing:
+                            time = datetime.today()
+                            user = User.objects.get(id=1)
+
+                        if indicator.is_int():
+                            point = IntDataPoint.objects.create(indicator=indicator.pk, time=time, value=value,
+                                                                validated=True, processed=False,
+                                                                user=user.pk, source=source.pk)
+                        elif indicator.is_float():
+                            point = FloatDataPoint.objects.create(indicator=indicator.pk, time=time, value=value,
+                                                                  validated=True, processed=False,
+                                                                  user=user.pk, source=source.pk)
+
+                        if point is None:
+                            debug.append(('output_indicators', ind_id, "Failed to create point", value))
+                            continue
+
+                        points.append(point)
+
+                    except Exception as e:
+                        debug.append(('outputs', ind_id, e))
+
+        for p in points:
+            p.analyse(user, time, data, source)
 
 
 class Displayable(Processable):
@@ -433,7 +544,7 @@ class Form(Displayable):
     class FormType(models.TextChoices):
         UNKNOWN = '?', _('Unknown')
         SURVEY = 'S', _('Survey')
-        MEDICAL_TEST = 'M', _('Medical Test')
+        MEDICAL_LAB = 'L', _('Medical Lab')
         DIETARY_JOURNAL = 'D', _('Dietary Journal Entry')
 
     tag = models.CharField(max_length=10, blank=True)
@@ -449,16 +560,69 @@ class Form(Displayable):
     def all_surveys():
         return Form.objects.filter(type=Form.FormType.SURVEY.value)
 
+    def is_survey(self):
+        return self.type == self.FormType.SURVEY.value
+
+    def is_lab(self):
+        return self.type == self.FormType.MEDICAL_LAB.value
+
+    def is_dietary(self):
+        return self.type == self.FormType.DIETARY_JOURNAL.value
+
     def get_survey(self):
-        if self.type is not Form.FormType.SURVEY.value:
+        if not self.is_survey():
             return None
 
         return Survey.objects.get(form=self.pk)
 
+    def get_lab(self):
+        if not self.is_lab():
+            return None
+
+        return MedicalLab.objects.get(form=self.pk)
+
     # This is here for now, to be put where it belongs later
     def creation_cascade(self, data):
-        if self.type == self.FormType.SURVEY.value:
-            survey = Survey.objects.create(form=self, )
+        if self.is_survey():
+            survey = Survey.objects.create(form=self.pk)
+        elif self.is_lab():
+            lab = MedicalLab.objects.create(form=self.pk)
+
+    def respond(self, data: dict, submission: 'Submission'):
+        if "elements" not in data.keys():
+            raise KeyError("elements")
+
+        groups = self.question_groups.order_by('number').all()
+
+        n = 0
+        for e in data["elements"]:
+            if not isinstance(e, dict):
+                raise TypeError(f"Element #{n} is not a dictionary. {e}")
+
+            e: dict
+
+            if "element_type" not in e.keys():
+                raise KeyError(f"Element #{n} is missing a type. {e}")
+
+            if e["element_type"] == QuestionGroup.element_type:
+                group: QuestionGroup = None
+                bad_id = None
+
+                if "id" in e.keys():
+                    group = groups.get(id=e["id"])
+
+                    if group is None:
+                        bad_id = e["id"]
+
+                if group is None:
+                    group = groups[n]
+
+                if group is None:
+                    if bad_id is not None:
+                        raise LookupError(f"Unable to find question group #{n} with id {bad_id}")
+                    raise LookupError(f"Unable to find question group #{n}")
+
+                group.respond(data, submission, e)
 
 
 class Survey(ModelBase):
@@ -468,6 +632,23 @@ class Survey(ModelBase):
     prefix = models.CharField(max_length=10, blank=True)
 
     form = models.OneToOneField(Form, on_delete=models.SET_NULL, null=True, related_name='surveys')
+
+    def __str__(self):
+        return str(self.form.name) + f" ({self.id})"
+
+    # Used with views and serializers
+    ModelHelper.inherit(_parent, _name)
+    ModelHelper.register(_name, 'prefix', 90)
+    ModelHelper.register(_name, 'form', 85, to_serialize=False, foreign=Form)
+
+
+class MedicalLab(ModelBase):
+    _name = 'MedicalLab'  # internal name
+    _parent = 'ModelBase'  # internal name
+
+    prefix = models.CharField(max_length=10, blank=True)
+
+    form = models.OneToOneField(Form, on_delete=models.SET_NULL, null=True, related_name='labs')
 
     def __str__(self):
         return str(self.form.name) + f" ({self.id})"
@@ -512,7 +693,7 @@ class TextElement(FormElement):
                                   help_text="The help text of this question.")
 
     screen_reader_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='text_elements_sr',
-                                  help_text="The screen reader text of this question.")
+                                           help_text="The screen reader text of this question.")
 
     class Meta:
         unique_together = (('form', 'number'),)
@@ -564,6 +745,8 @@ class QuestionGroup(FormElement):
                                            related_name='question_groups_sr',
                                            help_text="The screen reader text of this question group.")
 
+    internal_name = models.CharField(max_length=10, blank=True)
+
     # Used for units, format hints, etc.
     annotations = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
                                     validators=[validate_json], related_name='question_groups',
@@ -581,6 +764,7 @@ class QuestionGroup(FormElement):
     ModelHelper.register(_name, 'help_text', 74, foreign=Text)
     ModelHelper.register(_name, 'screen_reader_text', 73, foreign=Text)
     ModelHelper.register(_name, 'annotations', 70)
+    ModelHelper.register(_name, 'internal_name', 69)
 
     def get_questions(self):
         return Question.objects.filter(group=self.pk)
@@ -620,14 +804,75 @@ class QuestionGroup(FormElement):
         elif type in [QuestionGroup.DataType.FLOAT.value, QuestionGroup.DataType.FLOAT_RANGE.value]:
             return QuestionGroup.ResponseType.FLOAT
 
+    @staticmethod
+    def response_class_of(type):
+        if type is QuestionGroup.DataType.TEXT.value:
+            return TextResponse
+        elif type in [QuestionGroup.DataType.INT.value, QuestionGroup.DataType.INT_RANGE.value,
+                      QuestionGroup.DataType.BOOLEAN.value, QuestionGroup.DataType.EXCLUSIVE.value,
+                      QuestionGroup.DataType.CHOICES.value]:
+            return IntResponse
+        elif type in [QuestionGroup.DataType.FLOAT.value, QuestionGroup.DataType.FLOAT_RANGE.value]:
+            return FloatResponse
+
     def data_class(self):
         return self.data_class_of(self.type)
 
     def response_type(self):
         return self.response_type_of(self.type)
 
+    def response_class(self):
+        return self.response_class_of(self.type)
+
     def data(self) -> 'QuestionType':
         return self.data_class().objects.get(group=self.pk)
+
+    def respond(self, submission_data: dict, submission: 'Submission', data: dict):
+        if "questions" not in data.keys():
+            raise KeyError("questions")
+
+        questions = self.questions.order_by('number').all()
+
+        errors = []
+        errored_q = []
+
+        n = 0
+
+        for q in data["questions"]:
+            q: dict
+
+            value = q["value"]
+
+            try:
+                self.data().validate_value(value)
+
+                question: Question = None
+                bad_id = None
+
+                if "id" in q.keys():
+                    question = questions.get(id=q["id"])
+
+                    if question is None:
+                        bad_id = q['id']
+
+                if question is None:
+                    question = questions[n]
+
+                if question is None:
+                    if bad_id is not None:
+                        raise LookupError(f"Unable to find question #{n} with id {bad_id}")
+                    raise LookupError(f"Unable to find question #{n}")
+
+                question.respond(submission, value)
+
+            except (ValidationError, LookupError) as e:
+                errors.append(e)
+                errored_q.append(q)
+
+            n += 1
+
+        if len(errors) > 0:
+            raise ValidationError(errors)
 
 
 class Question(Displayable):
@@ -652,6 +897,8 @@ class Question(Displayable):
     screen_reader_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='questions_sr',
                                            help_text="The help text of this question.")
 
+    internal_name = models.CharField(max_length=10, blank=True)
+
     # Used for units, format hints, etc.
     annotations = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
                                     validators=[validate_json], related_name='questions',
@@ -670,7 +917,11 @@ class Question(Displayable):
     ModelHelper.register(_name, 'help_text', 74, foreign=Text)
     ModelHelper.register(_name, 'screen_reader_text', 73, foreign=Text)
     ModelHelper.register(_name, 'annotations', 70)
+    ModelHelper.register(_name, 'internal_name', 69)
     ModelHelper.register(_name, 'optional', 65, )
+
+    def respond(self, submission: 'Submission', value):
+        self.group.response_type().objects.create(submission=submission.pk, question=self.pk, value=value)
 
 
 class QuestionType(ModelBase):
@@ -685,6 +936,9 @@ class QuestionType(ModelBase):
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
+
+    def validate_value(self, value):
+        raise ValidationError("Not Implemented")
 
 
 class SingleInputQuestion(QuestionType):
@@ -717,7 +971,7 @@ class TextQuestion(SingleInputQuestion):
     ModelHelper.register(_name, 'min_length', 75, to_filter=True)
     ModelHelper.register(_name, 'max_length', 75, to_filter=True)
 
-    def validate(self, value: str) -> bool:
+    def validate_value(self, value: str) -> bool:
         return self.min_length < len(value) < self.max_length
 
 
@@ -742,7 +996,7 @@ class IntQuestion(SingleInputQuestion):
     ModelHelper.register(_name, 'min', 75, to_filter=True)
     ModelHelper.register(_name, 'max', 75, to_filter=True)
 
-    def validate(self, value: int) -> bool:
+    def validate_value(self, value: int) -> bool:
         return self.min < value < self.max
 
 
@@ -767,7 +1021,7 @@ class FloatQuestion(SingleInputQuestion):
     ModelHelper.register(_name, 'min', 75, to_filter=True)
     ModelHelper.register(_name, 'max', 75, to_filter=True)
 
-    def validate(self, value: float) -> bool:
+    def validate_value(self, value: float) -> bool:
         return self.min < value < self.max
 
 
@@ -812,9 +1066,20 @@ class IntRangeQuestion(FiniteChoiceQuestion):
     ModelHelper.register(_name, 'max', 75, to_filter=True)
     ModelHelper.register(_name, 'step', 75, to_filter=True)
 
-    def validate(self, value: int) -> bool:
-        return self.min < value < self.max \
-               and (self.step == 1 or value - self.min % self.step == 0)
+    def validate_value(self, data: int):
+        if not isinstance(data, int):
+            try:
+                value = int(data)
+            except ValueError:
+                raise ValidationError(_("Expected int, received %(value)") % {"value": value})
+        else:
+            value = data
+        if not (self.min < data < self.max):
+            raise ValidationError(_("Value %(value) is out of range: %(min) - %(max)")
+                                  % {"value": value, "min": self.min, "max": self.max})
+        elif not (self.step == 1 or value - self.min % self.step == 0):
+            raise ValidationError(_("Value %(value) is not allowed with step size %(step)")
+                                  % {"value": value, "step": self.step})
 
 
 class BooleanChoiceQuestion(FiniteChoiceQuestion):
@@ -838,7 +1103,7 @@ class BooleanChoiceQuestion(FiniteChoiceQuestion):
 
     #  This is not very useful but is required to fit the expected interface
     @staticmethod
-    def validate(self, value: bool) -> bool:
+    def validate_value(self, value: bool) -> bool:
         return isinstance(value, bool)
 
 
@@ -861,7 +1126,7 @@ class ExclusiveChoiceQuestion(FiniteChoiceQuestion):
     ModelHelper.register(_name, 'group', 85, to_serialize=False, foreign=QuestionGroup)
     ModelHelper.register(_name, 'labels', 70, text_type='JSON', foreign=StringGroup)
 
-    def validate(self, value: int) -> bool:
+    def validate_value(self, value: int) -> bool:
         return 0 <= value <= self.num_possibilities
 
 
@@ -898,10 +1163,22 @@ class MultiChoiceQuestion(FiniteChoiceQuestion):
             n >>= 1
         return count
 
-    def validate(self, value: int) -> bool:
+    def validate_value(self, value: int) -> bool:
         if self.min_choices > 0:
             return (0 < value < 2 ** self.max_choices) \
                    and self.count_bits(value) < self.max_choices
+
+    def validate_value(self, data: float):
+        if not isinstance(data, float):
+            try:
+                value = float(data)
+            except ValueError:
+                raise ValidationError(_("Expected float, received %(value)") % {"value": value})
+        else:
+            value = data
+        if not (self.min < data < self.max):
+            raise ValidationError(_("Value %(value) is out of range: %(min) - %(max)")
+                                  % {"value": value, "min": self.min, "max": self.max})
 
 
 class ContinuousChoiceQuestion(QuestionType):
@@ -944,8 +1221,17 @@ class FloatRangeQuestion(ContinuousChoiceQuestion):
     ModelHelper.register(_name, 'min', 75, to_filter=True)
     ModelHelper.register(_name, 'max', 75, to_filter=True)
 
-    def validate(self, value: int) -> bool:
-        return self.min < value < self.max
+    def validate_value(self, data: float):
+        if not isinstance(data, float):
+            try:
+                value = float(data)
+            except ValueError:
+                raise ValidationError(_("Expected float, received %(value)") % {"value": value})
+        else:
+            value = data
+        if not (self.min < data < self.max):
+            raise ValidationError(_("Value %(value) is out of range: %(min) - %(max)")
+                                  % {"value": value, "min": self.min, "max": self.max})
 
 
 class Submission(ModelBase):
@@ -956,6 +1242,7 @@ class Submission(ModelBase):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, related_name='submissions')
     form = models.ForeignKey(Form, on_delete=models.SET_NULL, null=True, related_name='submissions')
+    submitter = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='submissions_s')
 
     time = models.DateTimeField(null=False, db_index=True)
 
@@ -977,6 +1264,7 @@ class Submission(ModelBase):
     # ModelHelper.register(_name, 'profile', 85, foreign=Profile)
     ModelHelper.register(_name, 'user', 85, foreign=User)
     ModelHelper.register(_name, 'form', 85, foreign=Form)
+    ModelHelper.register(_name, 'submitter', 84, foreign=User)
     ModelHelper.register(_name, 'time', 75, to_filter=True)
     ModelHelper.register(_name, 'raw_data', 60, False, text_type='JSON')
     ModelHelper.register(_name, 'notes', 30, to_serialize=False)
@@ -984,10 +1272,21 @@ class Submission(ModelBase):
     ModelHelper.register(_name, 'parsed', 10, False, to_serialize=False, to_search=True)
     ModelHelper.register(_name, 'processed', 10, False, to_serialize=False, to_search=True)
 
+    def process(self):
+        try:
+            data = json.loads(self.raw_data)
+
+            self.form.respond(data, self)
+
+        except Exception as e:
+            raise ValueError(f"Unable to parse data ({e})")
+
 
 class ResponseType(ModelBase):
     _name = 'ResponseType'  # internal name
     _parent = 'ModelBase'  # internal name
+
+    DATA_TAG = "data"
 
     #  Subclasses must have a question field pointing to their question instance
 
@@ -1003,18 +1302,43 @@ class ResponseType(ModelBase):
     ModelHelper.inherit(_parent, _name)
     ModelHelper.register(_name, 'left_blank', 40)
 
-    def validate(self, data: dict):
-        if 'value' in data.keys():
-            self.validate_value(data['value'])
-        raise ValidationError("No value provided.")
+    def validate_data(self, data: dict) -> bool:
+        # In case value passed directly
+        if not isinstance(data, dict):
+            return self.validate_value(data)
+
+        if self.question.group.optional and self.left_blank:
+            return True
+        elif self.left_blank:
+            raise ValidationError(_("Question not answered."))
+        elif self.DATA_TAG not in data.keys():
+            raise ValueError(_("No value provided."))
+        return self.validate_value(data[self.DATA_TAG])
+
+    def validate_data_return(self, data: dict):
+        if self.question.group.optional and self.left_blank:
+            return None
+        elif self.left_blank:
+            raise ValidationError(_("Question not answered."))
+        elif self.DATA_TAG not in data.keys():
+            raise ValueError(_("No value provided."))
+        return self.validate_value_return(data[self.DATA_TAG])
 
     # Delegated
     def validate_value(self, value) -> bool:
-        if self.question.group.optional and self.left_blank:
-            return False
-        elif self.left_blank:
-            raise ValidationError(_('Question must be answered.'))
-        return self.question.group.data_class().validate(value)
+        return self.question.group.data_class().validate_value(value)
+
+    def validate_value_return(self, value):
+        return self.question.group.data_class().validate_return(value)
+
+    def parse_response(self, response: dict, optional=False) -> int:
+        if not optional and self.DATA_TAG not in response.keys():
+            raise ValueError(_("No data value(s) present."))
+
+        value = int(response[self.DATA_TAG])
+        if not self.validate(value):
+            raise ValidationError(value)
+        return value
 
 
 class TextResponse(ResponseType):
@@ -1026,7 +1350,7 @@ class TextResponse(ResponseType):
     question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True,
                                  related_name='text_responses')
 
-    value = models.TextField(null=False, validators=[ResponseType.validate])
+    value = models.TextField(null=False, validators=[ResponseType.validate_value])
 
     class Meta:
         unique_together = (('submission', 'question'),)
@@ -1059,7 +1383,7 @@ class IntResponse(ResponseType):
     question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True,
                                  related_name='int_responses')
 
-    value = models.IntegerField(null=False, validators=[ResponseType.validate])
+    value = models.IntegerField(null=False, validators=[ResponseType.validate_value])
 
     class Meta:
         unique_together = (('submission', 'question'),)
@@ -1084,7 +1408,7 @@ class FloatResponse(ResponseType):
     question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True,
                                  related_name='float_responses')
 
-    value = models.FloatField(null=False, validators=[ResponseType.validate])
+    value = models.FloatField(null=False, validators=[ResponseType.validate_value])
 
     class Meta:
         unique_together = (('submission', 'question'),)
@@ -1111,7 +1435,28 @@ class Indicator(Displayable):
         FLOAT = 'D', _('Decimal')
 
     type = models.CharField(max_length=1, blank=False, choices=DataType.choices, default=DataType.UNKNOWN)
+
     ModelHelper.register(_name, 'type', 85, to_filter=True, to_search=True)
+
+    def is_int(self):
+        return self.type == self.DataType.INT.value
+
+    def is_float(self):
+        return self.type == self.DataType.FLOAT.value
+
+    def validate(self, value):
+        if value is None or \
+                self.is_int() and not isinstance(value, int) or \
+                self.is_float() and not isinstance(value, float):
+            return False
+
+        # TODO
+
+        return True
+
+    @property
+    def internal_name(self):
+        return self._name
 
 
 class IndicatorDataPoint(Displayable):

@@ -18,6 +18,7 @@
           <option value="Revitalize.models.ResponseType.submission" />
           <option value="Revitalize.models.ResponseType.question" />
           <option value="Scripts.load_surveys.surveys" />
+          <option value="Revitalize.models.FormElement.element_type" />
         </list>
       </option>
     </inspection_tool>

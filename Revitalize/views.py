@@ -1,7 +1,5 @@
-from rest_framework import permissions, status, viewsets
-from rest_framework.decorators import action, api_view
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 
 from Revitalize.serializers import *
 
@@ -104,11 +102,24 @@ class FormViewSet(viewsets.ModelViewSet):
             return ResponseType(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
 
-class SurveyViewSet(viewsets.ModelViewSet):
+class SurveyViewSetAll(viewsets.ModelViewSet):
     _model = Survey
     serializer_class = SurveySerializer
     queryset = _model.objects.all()
 
+
+class SurveyViewSet(viewsets.ModelViewSet):
+    _model = Survey
+    serializer_class = SurveySerializerDisplay
+    queryset = _model.objects.all()
+
+
+class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
+    _model = Form
+    serializer_class = FormSerializerDisplay
+    queryset = _model.objects.filter(type=Form.FormType.SURVEY.value).all()
+
+    # TODO Needs to be fixed...
     @action(detail=True, methods=['POST'])
     def submit(self, request, pk=None):
         try:
@@ -140,6 +151,18 @@ class SurveyViewSet(viewsets.ModelViewSet):
             return ResponseType(response, status=status.HTTP_201_CREATED)
         except Exception as e:
             return ResponseType(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
+
+
+class MedicalLabViewSet(viewsets.ModelViewSet):
+    _model = MedicalLab
+    serializer_class = MedicalLabSerializer
+    queryset = _model.objects.all()
+
+
+class MedicalLabViewSetFrontEnd(viewsets.ModelViewSet):
+    _model = Form
+    serializer_class = FormSerializerDisplay
+    queryset = _model.objects.filter(type=Form.FormType.MEDICAL_LAB.value).all()
 
 
 class TextElementViewSet(viewsets.ModelViewSet):

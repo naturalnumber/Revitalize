@@ -1,11 +1,12 @@
 import Revitalize.models
+from rest_framework.utils import json
 
 # To load this run:
 # python ./manage.py shell
 # Then enter:
 # exec(open("./load_surveys.py").read())
 
-debug = False
+debug = True
 
 semcd6 = {
         "tag"        : "SEMCD6",
@@ -170,7 +171,15 @@ semcd6 = {
                                 }
                         ]
                 }
-        ]
+        ],
+        "analysis": {
+                "outputs": [
+                        {
+                                "type": "Indicator",
+                                "calculation": "(q1_1 + q1_2 + q1_3 + q1_4 + q1_5 + q1_6)/6"
+                        }
+                ]
+        }
 }
 
 rand36 = {
@@ -620,6 +629,13 @@ def _b(q: dict, key: str, default):
 
 def _nd(s: dict):
     if debug: print(f"_nd()")
+    analysis = _k(s, "analysis")
+    if analysis is not None:
+        if debug: print(f"_nd(): {analysis}")
+        if isinstance(analysis, dict):
+            analysis = json.dumps(analysis)
+            if debug: print(f"_nd(): {analysis}")
+        return {"name": _n(s), "description": _d(s), "analysis": analysis}
     return {"name": _n(s), "description": _d(s)}
 
 
@@ -709,7 +725,8 @@ def _qnd(q: dict, tag: str, n: int, m: int):
             "help_text"  : _t(_k(q, "help_text", None)),
             "number"     : m,
             "prefix"     : _k(q, "number", ""),
-            "annotations": _a(q)
+            "annotations": _a(q),
+            "internal_name": _k(q, "internal_name", f"q{n}_{m}"),
     }
 
     op = _k(q, "optional", None)
@@ -793,7 +810,13 @@ empty_string = _s("")
 empty_text = _t("")
 empty_string_group = _g("{}")
 
+ind = Revitalize.models.Indicator.objects.create(name=_s("semcd6"),
+                                                 type=Revitalize.models.Indicator.DataType.FLOAT.value)
+semcd6["analysis"]["id"] = ind.id
+
 loaded = [load_survey(s) for s in survey_list]
+
+
 
 # python ./manage.py shell
 # exec(open("./load_surveys.py").read())
