@@ -180,6 +180,35 @@ class StringGroup(models.Model):
     ModelHelper.register(_name, 'id', 100, to_serialize=False, to_search=True)
     ModelHelper.register(_name, 'value', 75, to_search=True, text_type='JSON')
 
+    @classmethod
+    def is_empty(cls, sg: 'StringGroup'):
+        if sg is None or len(sg.value) < 3:
+            return True
+
+        data = json.loads(sg.value)
+
+        if isinstance(data, dict) and len(data.keys()) < 1 or \
+                isinstance(data, list) and len(data) < 1:
+            return True
+
+        return False
+
+    @classmethod
+    def size(cls, sg: 'StringGroup'):
+        if sg is None or len(sg.value) < 3:
+            return 0
+
+        data = json.loads(sg.value)
+
+        if isinstance(data, dict):
+            return len(data.keys())
+        if isinstance(data, list):
+            return len(data)
+
+        return -1
+
+
+
 
 class ModelBase(models.Model):
     _name = 'ModelBase'  # internal name
@@ -1087,6 +1116,7 @@ class BooleanChoiceQuestion(FiniteChoiceQuestion):
     _parent = 'FiniteChoiceQuestion'  # internal name
 
     question_group_type = "boolean"
+    default_labels = json.dumps(["yes", "no"])
 
     labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
                                related_name='boolean_choice_questions',
@@ -1272,11 +1302,19 @@ class Submission(ModelBase):
     ModelHelper.register(_name, 'parsed', 10, False, to_serialize=False, to_search=True)
     ModelHelper.register(_name, 'processed', 10, False, to_serialize=False, to_search=True)
 
-    def process(self):
+    def validate(self):
+        return json.loads(self.raw_data)
+        # TODO
+        pass
+
+    def process(self, data=None):
         try:
-            data = json.loads(self.raw_data)
+            if data is None:
+                data = json.loads(self.raw_data)
 
             self.form.respond(data, self)
+
+            self.form.analyse(self.user, self.time, data, self)
 
         except Exception as e:
             raise ValueError(f"Unable to parse data ({e})")

@@ -5,6 +5,8 @@ from Revitalize.models import *
 admin.site.register(Text)
 admin.site.register(String)
 admin.site.register(StringGroup)
+admin.site.register(Address)
+admin.site.register(CanadianAddress)
 admin.site.register(Profile)
 admin.site.register(Form)
 admin.site.register(Survey)

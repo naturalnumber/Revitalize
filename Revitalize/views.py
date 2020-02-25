@@ -1,5 +1,6 @@
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 
 from Revitalize.serializers import *
 
@@ -118,8 +119,8 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
     _model = Form
     serializer_class = FormSerializerDisplay
     queryset = _model.objects.filter(type=Form.FormType.SURVEY.value).all()
+    permission_classes = (IsAuthenticated,)
 
-    # TODO Needs to be fixed...
     @action(detail=True, methods=['POST'])
     def submit(self, request, pk=None):
         try:
@@ -127,26 +128,32 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
                 return _bad("Must provide a time.")
             if 'submission_data' not in request.data:
                 return _bad("Must provide submission data.")
+            if pk is None:
+                return _bad("No key provided.")
 
             # Validate
 
             # Check for replacement
 
-            #  user = request.user TODO
-            user = User.objects.get(id=1)  # request.user.profile  # TODO
+            user = request.user  # TODO
+            # user = User.objects.get(id=1)  # request.user.profile  # TODO
 
-            survey = Survey.objects.get(id=pk)
-            form = survey.form
+            #survey = Survey.objects.get(id=pk)
+            #form = survey.form
+            form = Form.objects.get(id=pk)
             time = request.data['time']
-            raw_data = request.data['submission_data']
+            submission_data = request.data['submission_data']
 
-            submission = Submission.objects.create(user=user, form=form, time=time, raw_data=raw_data)
+            submission = Submission.objects.create(user=user, form=form, time=time, raw_data=submission_data)
 
             serializer = SubmissionSerializer(submission, many=False)
 
             response = {'message': 'Submission received', 'result': serializer.data}
 
-            # Bad input...
+            try:
+                submission.process(submission.validate())
+            except ValidationError as e:
+                return ResponseType(_m(f"Could not validate submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
             return ResponseType(response, status=status.HTTP_201_CREATED)
         except Exception as e:

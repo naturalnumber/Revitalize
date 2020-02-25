@@ -389,6 +389,10 @@ class FloatDataPointSerializer(serializers.ModelSerializer):
 
 
 class QuestionSerializerDisplay(serializers.ModelSerializer):
+    # Nameable
+    #name = serializers.SerializerMethodField()
+    #description = serializers.SerializerMethodField()
+
     text = serializers.SerializerMethodField()
     help_text = serializers.SerializerMethodField()
     screen_reader_text = serializers.SerializerMethodField()
@@ -458,6 +462,9 @@ class IntRangeQuestionSerializerDisplay(serializers.ModelSerializer):
     def get_minimum(self, q: IntRangeQuestion):
         return q.min
 
+    def get_maximum(self, q: IntRangeQuestion):
+        return q.max
+
     def get_annotations(self, q: IntRangeQuestion):
         return _str(q.group.annotations)
 
@@ -469,17 +476,35 @@ class BooleanChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
 
     class Meta:
         model = BooleanChoiceQuestion
-        fields = ModelHelper.serialize(model.__name__)
+        fields = ['labels', 'annotations']
+
+    def get_labels(self, q: BooleanChoiceQuestion):
+        if StringGroup.size(q.labels) < 2:
+            return q.default_labels
+        else:
+            return _str(q.labels)
+
+    def get_annotations(self, q: BooleanChoiceQuestion):
+        return _str(q.group.annotations)
 
 
 class ExclusiveChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
     labels = StringGroupSerializer(many=False)
 
-    # question = QuestionSerializer(many=False)
+    # question = QuestionSerializer(many=False) TODO
 
     class Meta:
         model = ExclusiveChoiceQuestion
-        fields = ModelHelper.serialize(model.__name__)
+        fields = ['labels', 'annotations']
+
+    def get_labels(self, q: ExclusiveChoiceQuestion):
+        if StringGroup.size(q.labels) < 2:
+            return q.default_labels
+        else:
+            return _str(q.labels)
+
+    def get_annotations(self, q: ExclusiveChoiceQuestion):
+        return _str(q.group.annotations)
 
 
 class MultiChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
@@ -622,13 +647,21 @@ class QuestionGroupSerializerDisplay(serializers.ModelSerializer):
 
 
 class FormSerializerDisplay(serializers.ModelSerializer):
-    name = StringSerializer(many=False)
-    description = TextSerializer(many=False)
+    # Nameable
+    name = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
+
     elements = serializers.SerializerMethodField()
 
     class Meta:
         model = Form
         fields = ['id', 'name', 'description', 'type', 'display', 'elements']
+
+    def get_name(self, n: Nameable):
+        return n.name.value
+
+    def get_description(self, n: Nameable):
+        return n.description.value
 
     def get_elements(self, f: Form):
         elements = sorted(chain(f.text_elements.order_by('number').all(),
@@ -776,12 +809,12 @@ class AvailableSurveySerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'form_id']
 
     def get_name(self, s: Survey):
-        name_serializer = StringSerializer(s.form.name, many=False)
-        return name_serializer.data
+        #name_serializer = StringSerializer(s.form.name, many=False)
+        return _str(s.form.name)
 
     def get_description(self, s: Survey):
-        description_serializer = TextSerializer(s.form.description, many=False)
-        return description_serializer.data
+        #description_serializer = TextSerializer(s.form.description, many=False)
+        return _str(s.form.description)
 
     def get_form_id(self, s: Survey):
         return s.form.id
