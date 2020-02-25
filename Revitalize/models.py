@@ -23,6 +23,15 @@ def pre_validate_json(j: str):
         raise ValidationError(e)
 
 
+class LangCode(models.TextChoices):
+    UNKNOWN = '?', _('Unknown')
+    ENGLISH = 'EN', _('English')
+
+
+def _str(entry, lang=LangCode.ENGLISH, default=None):
+    return entry.value if entry is not None else default
+
+
 class ModelHelper:
     model_fields: dict = {}
     model_sorts: dict = {}
