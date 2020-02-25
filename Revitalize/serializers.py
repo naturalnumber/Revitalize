@@ -286,7 +286,7 @@ class FormSerializerDisplay(serializers.ModelSerializer):
 
 
 class SurveySerializer(serializers.ModelSerializer):
-    form = FormSerializerDisplay(many=False)
+    form = FormSerializer(many=False)
 
     class Meta:
         model = Survey
