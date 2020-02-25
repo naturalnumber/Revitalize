@@ -309,3 +309,18 @@ class FloatDataPointViewSet(viewsets.ModelViewSet):
 class AvailableSurveyViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Survey.objects.all()
     serializer_class = AvailableSurveySerializer
+
+
+class UserSurveyHistoryViewSet(viewsets.ModelViewSet):
+    queryset = Submission.objects.all()
+    serializer_class = UserSurveyHistorySerializer
+
+
+class ProfileRetrievalViewSet(viewsets.ModelViewSet):
+    queryset = Profile.objects.all()
+    serializer_class = ProfileRetrievalSerializer
+
+
+class UserIndicatorViewSet(viewsets.ModelViewSet):
+    queryset = Indicator.objects.all()
+    serializer_class = UserIndicatorSerializer

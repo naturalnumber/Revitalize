@@ -5,6 +5,8 @@ from Revitalize.views import *
 
 router = routers.DefaultRouter()
 
+# TODO: are these showing the proper urls when doing '/api/'
+
 router.register('text', TextViewSet)
 router.register('strings', StringViewSet)
 router.register('string_groups', StringGroupViewSet)
@@ -13,6 +15,9 @@ router.register('forms', FormViewSet)
 router.register('surveys', SurveyViewSetFrontEnd)
 router.register('medical_labs', MedicalLabViewSetFrontEnd)
 router.register('available_surveys', AvailableSurveyViewSet)
+router.register('user_survey_history', UserSurveyHistoryViewSet)
+router.register('profile_retrieval', ProfileRetrievalViewSet)
+router.register('user_indicator', UserIndicatorViewSet)
 router.register('text_elements', TextElementViewSet)
 router.register('question_groups', QuestionGroupViewSet)
 router.register('questions', QuestionViewSet)

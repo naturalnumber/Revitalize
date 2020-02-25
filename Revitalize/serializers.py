@@ -701,3 +701,21 @@ class AvailableSurveySerializer(serializers.ModelSerializer):
 
     def get_form_id(self, s: Survey):
         return s.form.id
+
+
+class UserSurveyHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Submission
+        fields = ModelHelper.serialize(model.__name__)
+
+
+class ProfileRetrievalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ModelHelper.serialize(model.__name__)
+
+
+class UserIndicatorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Indicator
+        fields = ModelHelper.serialize(model.__name__)
