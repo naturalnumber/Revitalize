@@ -446,7 +446,7 @@ class FloatQuestionSerializerDisplay(serializers.ModelSerializer):
 
 
 class IntRangeQuestionSerializerDisplay(serializers.ModelSerializer):
-    labels = StringGroupSerializer(many=False)  # TODO
+    labels = serializers.SerializerMethodField()  # TODO
 
     annotations = serializers.SerializerMethodField()
 
@@ -470,7 +470,7 @@ class IntRangeQuestionSerializerDisplay(serializers.ModelSerializer):
 
 
 class BooleanChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
-    labels = StringGroupSerializer(many=False)
+    labels = serializers.SerializerMethodField()
 
     # question = QuestionSerializer(many=False)
 
@@ -489,7 +489,7 @@ class BooleanChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
 
 
 class ExclusiveChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
-    labels = StringGroupSerializer(many=False)
+    labels = serializers.SerializerMethodField()
 
     # question = QuestionSerializer(many=False) TODO
 
