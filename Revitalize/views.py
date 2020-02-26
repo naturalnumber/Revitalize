@@ -8,6 +8,8 @@ from Revitalize.serializers import *
 
 # Helper methods
 
+print_debug = False
+
 
 def _m(m: str):
     return {'message': m}
@@ -99,9 +101,9 @@ class FormViewSet(viewsets.ModelViewSet):
 
             # Bad input...
 
-            return ResponseType(response, status=status.HTTP_201_CREATED)
+            return Response(response, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return ResponseType(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
+            return Response(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
 
 class SurveyViewSetAll(viewsets.ModelViewSet):
@@ -124,8 +126,8 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['POST'])
     def submit(self, request, pk=None):
-        print(pk)
-        print(request)
+        if print_debug: print(pk)
+        if print_debug: print(request)
         try:
             if 'time' not in request.data:
                 return _bad("Must provide a time.")
@@ -138,22 +140,31 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
 
             # Check for replacement
 
-            user = request.user  # TODO
-            # user = User.objects.get(id=1)  # request.user.profile  # TODO
+            if print_debug: print("check 1")
 
-            #survey = Survey.objects.get(id=pk)
-            #form = survey.form
+            user = request.user  # TODO
+
+            if print_debug: print(user)
+
             form = Form.objects.get(id=pk)
+            if print_debug: print(form)
+
             time = request.data['time']
+            if print_debug: print(time)
+
             submission_data = request.data['submission_data']
+            if print_debug: print(submission_data)
+            if print_debug: print(type(submission_data))
 
             submission = Submission.objects.create(user=user, form=form, time=time, raw_data=submission_data)
+            if print_debug: print(submission)
 
             serializer = SubmissionSerializer(submission, many=False)
 
             response = {'message': 'Submission received', 'result': serializer.data}
 
             try:
+                if print_debug: print('check 2')
                 submission.process(submission.validate())
             except ValidationError as e:
                 return Response(_m(f"Could not validate submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
@@ -275,9 +286,9 @@ class SubmissionViewSet(viewsets.ModelViewSet):
 
             # Bad input...
 
-            return ResponseType(response, status=status.HTTP_202_ACCEPTED)
+            return Response(response, status=status.HTTP_202_ACCEPTED)
         except Exception as e:
-            return ResponseType(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
+            return Response(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
 
 class TextResponseViewSet(viewsets.ModelViewSet):

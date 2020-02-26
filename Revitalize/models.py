@@ -10,6 +10,9 @@ from rest_framework.utils import json
 from Revitalize.data_analysis_system import DataAnalysisSystem
 
 
+print_debug = False
+
+
 def validate_json(j: str):
     try:
         return json.loads(j) is not None
@@ -416,7 +419,7 @@ class Nameable(ModelBase):
         abstract = True
 
     def __str__(self):
-        return self.name.value + f" ({self.id})"
+        return (self.name.value if self.name is not None else "(unnamed)") + f" ({self.id})"
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -533,13 +536,13 @@ class Processable(Nameable):
                             user = User.objects.get(id=1)
 
                         if indicator.is_int():
-                            point = IntDataPoint.objects.create(indicator=indicator.pk, time=time, value=value,
+                            point = IntDataPoint.objects.create(indicator=indicator, time=time, value=value,
                                                                 validated=True, processed=False,
-                                                                user=user.pk, source=source.pk)
+                                                                user=user, source=source)
                         elif indicator.is_float():
-                            point = FloatDataPoint.objects.create(indicator=indicator.pk, time=time, value=value,
+                            point = FloatDataPoint.objects.create(indicator=indicator, time=time, value=value,
                                                                   validated=True, processed=False,
-                                                                  user=user.pk, source=source.pk)
+                                                                  user=user, source=source)
 
                         if point is None:
                             debug.append(('output_indicators', ind_id, "Failed to create point", value))
@@ -622,10 +625,13 @@ class Form(Displayable):
             lab = MedicalLab.objects.create(form=self.pk)
 
     def respond(self, data: dict, submission: 'Submission'):
+        if print_debug: print(f"respond({data}, {submission})")
         if "elements" not in data.keys():
             raise KeyError("elements")
 
         groups = self.question_groups.order_by('number').all()
+
+        if print_debug: print(f"\trespond groups: {groups}")
 
         n = 0
         for e in data["elements"]:
@@ -634,12 +640,16 @@ class Form(Displayable):
 
             e: dict
 
+            if print_debug: print(f"\trespond-#{n} e: {e}")
+
             if "element_type" not in e.keys():
                 raise KeyError(f"Element #{n} is missing a type. {e}")
 
             if e["element_type"] == QuestionGroup.element_type:
                 group: QuestionGroup = None
                 bad_id = None
+
+                if print_debug: print(f"\trespond {e['element_type']} == {QuestionGroup.element_type}")
 
                 if "id" in e.keys():
                     group = groups.get(id=e["id"])
@@ -655,7 +665,11 @@ class Form(Displayable):
                         raise LookupError(f"Unable to find question group #{n} with id {bad_id}")
                     raise LookupError(f"Unable to find question group #{n}")
 
+                if print_debug: print(f"\trespond group {group}")
+
                 group.respond(data, submission, e)
+            elif print_debug: print(f"\trespond {e['element_type']} =/= {QuestionGroup.element_type}")
+        if print_debug: print(f"/respond")
 
 
 class Survey(ModelBase):
@@ -861,6 +875,8 @@ class QuestionGroup(FormElement):
         return self.data_class().objects.get(group=self.pk)
 
     def respond(self, submission_data: dict, submission: 'Submission', data: dict):
+        if print_debug: print(f"respond({submission_data}, {submission}, {data})")
+
         if "questions" not in data.keys():
             raise KeyError("questions")
 
@@ -874,10 +890,16 @@ class QuestionGroup(FormElement):
         for q in data["questions"]:
             q: dict
 
+            if print_debug: print(f"\trespond q: {q}")
+
             value = q["value"]
+
+            if print_debug: print(f"\trespond value: {value}")
 
             try:
                 self.data().validate_value(value)
+
+                if print_debug: print(f"\trespond value: valid")
 
                 question: Question = None
                 bad_id = None
@@ -896,6 +918,8 @@ class QuestionGroup(FormElement):
                         raise LookupError(f"Unable to find question #{n} with id {bad_id}")
                     raise LookupError(f"Unable to find question #{n}")
 
+                if print_debug: print(f"\trespond question: {question}")
+
                 question.respond(submission, value)
 
             except (ValidationError, LookupError) as e:
@@ -906,6 +930,8 @@ class QuestionGroup(FormElement):
 
         if len(errors) > 0:
             raise ValidationError(errors)
+
+        if print_debug: print(f"/respond")
 
 
 class Question(Displayable):
@@ -954,7 +980,7 @@ class Question(Displayable):
     ModelHelper.register(_name, 'optional', 65, )
 
     def respond(self, submission: 'Submission', value):
-        self.group.response_type().objects.create(submission=submission.pk, question=self.pk, value=value)
+        self.group.response_class().objects.create(submission=submission, question=self, value=value)
 
 
 class QuestionType(ModelBase):
@@ -1318,16 +1344,24 @@ class Submission(ModelBase):
         pass
 
     def process(self, data=None):
+        if print_debug: print(f"process({data})")
         try:
             if data is None:
                 data = json.loads(self.raw_data)
 
+            if print_debug: print(f"\tprocess 1")
+
             self.form.respond(data, self)
+
+            if print_debug: print(f"\tprocess form responded")
 
             self.form.analyse(self.user, self.time, data, self)
 
+            if print_debug: print(f"\tprocess analysed")
+
         except Exception as e:
             raise ValueError(f"Unable to parse data ({e})")
+        if print_debug: print(f"/process")
 
 
 class ResponseType(ModelBase):
@@ -1404,9 +1438,6 @@ class TextResponse(ResponseType):
         unique_together = (('submission', 'question'),)
         index_together = (('submission', 'question'),)
 
-    def __str__(self):
-        return super.__str__()
-
     # Delegate to contained string
     def __len__(self):
         return self.value.__len__()
@@ -1437,9 +1468,6 @@ class IntResponse(ResponseType):
         unique_together = (('submission', 'question'),)
         index_together = (('submission', 'question'),)
 
-    def __str__(self):
-        return super.__str__()
-
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
     ModelHelper.register(_name, 'submission', 85, foreign=Submission)
@@ -1461,9 +1489,6 @@ class FloatResponse(ResponseType):
     class Meta:
         unique_together = (('submission', 'question'),)
         index_together = (('submission', 'question'),)
-
-    def __str__(self):
-        return super.__str__()
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
