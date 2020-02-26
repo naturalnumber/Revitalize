@@ -123,9 +123,9 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
 
     @action(detail=True, methods=['POST'])
-    def post(self, request, pk=None):
-        #print(pk)
-        #print(request)
+    def submit(self, request, pk=None):
+        print(pk)
+        print(request)
         try:
             if 'time' not in request.data:
                 return _bad("Must provide a time.")

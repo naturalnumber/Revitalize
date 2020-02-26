@@ -200,7 +200,7 @@ class QuestionSerializer(serializers.ModelSerializer):
         return q.text.value
 
     def get_annotations(self, q: Question):
-        return q.annotations.value
+        return json.loads(_str(q.annotations)) if q.annotations is not None else None
 
 
 # Elements
@@ -247,7 +247,7 @@ class QuestionGroupSerializer(serializers.ModelSerializer):
         return q.text.value
 
     def get_annotations(self, q: QuestionGroup):
-        return q.annotations.value
+        return json.loads(_str(q.annotations)) if q.annotations is not None else None
 
     def get_question_data(self, qg: QuestionGroup):
         data = qg.data()
@@ -415,7 +415,7 @@ class QuestionSerializerDisplay(serializers.ModelSerializer):
         return _str(q.screen_reader_text)
 
     def get_annotations(self, q: Question):
-        return _str(q.annotations)
+        return json.loads(_str(q.annotations)) if q.annotations is not None else None
 
     def get_number(self, q: Question):
         return q.prefix
@@ -472,7 +472,7 @@ class IntRangeQuestionSerializerDisplay(serializers.ModelSerializer):
         return q.max
 
     def get_annotations(self, q: IntRangeQuestion):
-        return _str(q.group.annotations)
+        return json.loads(_str(q.group.annotations)) if q.group.annotations is not None else None
 
 
 class BooleanChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
@@ -494,7 +494,7 @@ class BooleanChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
         return vals
 
     def get_annotations(self, q: BooleanChoiceQuestion):
-        return _str(q.group.annotations)
+        return json.loads(_str(q.group.annotations)) if q.group.annotations is not None else None
 
 
 class ExclusiveChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
@@ -516,7 +516,7 @@ class ExclusiveChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
         return vals
 
     def get_annotations(self, q: ExclusiveChoiceQuestion):
-        return _str(q.group.annotations)
+        return json.loads(_str(q.group.annotations)) if q.group.annotations is not None else None
 
 
 class MultiChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
@@ -613,7 +613,7 @@ class QuestionGroupSerializerDisplay(serializers.ModelSerializer):
         return _str(e.screen_reader_text)
 
     def get_annotations(self, e: QuestionGroup):
-        return _str(e.annotations)
+        return json.loads(_str(e.annotations)) if e.annotations is not None else None
 
     def get_number(self, e: FormElement):
         return e.prefix
