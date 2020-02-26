@@ -6,6 +6,7 @@ from rest_framework.utils import json
 # Then enter:
 # exec(open("./load_surveys.py").read())
 
+
 debug = True
 
 semcd6 = {
@@ -576,7 +577,177 @@ rand36 = {
         ]
 }
 
-survey_list = [semcd6, rand36]
+phq9 = {
+        "tag"        : "PHQ-9",
+        "name"       : "Patient Health Questionnaire",
+        "description": "",
+        "elements"   : [
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "integer_range",
+                        "question_group_type_data": {
+                                "minimum"    : 0,
+                                "maximum"    : 3,
+                                "step"       : 1,
+                                "initial"    : 3,
+                                "labels"     : [
+                                        "Not at all",
+                                        "Several days",
+                                        "More than half the days",
+                                        "Nearly every day"
+                                ],
+                                "annotations": None
+                        },
+                        "text"                    : "Over the last 2 weeks, how often have you been bothered by any of the following problems?",
+                        "number_of_questions"     : 9,
+                        "questions"               : [
+                                {
+                                        "number"   : "1",
+                                        "text"     : "Little interest or pleasure in doing things",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "2",
+                                        "text"     : "Feeling down, depressed, or hopeless",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "3",
+                                        "text"     : "Trouble falling or staying asleep, or sleeping too much",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "4",
+                                        "text"     : "Feeling tired or having little energy",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "5",
+                                        "text"     : "Poor appetite or overeating",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "6",
+                                        "text"     : "Feeling bad about yourself – or that you are a failure or have let yourself or your family down",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "7",
+                                        "text"     : "Trouble concentrating on things, such as reading the newspaper or watching television",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "8",
+                                        "text"     : "Moving or speaking so slowly that other people could have noticed? Or the opposite – being so fidgety or restless that you have been moving around a lot more than usual",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "9",
+                                        "text"     : "Thoughts that you would be better off dead or of hurting yourself in some way",
+                                        "help_text": None
+                                }
+                        ]
+                },
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "exclusive_choices",
+                        "question_group_type_data": {
+                                "number_of_choices": 4,
+                                "initial"          : None,
+                                "labels"           : ["Not difficult at all", "Somewhat difficult",
+                                                      "Very difficult", "Extremely difficult"],
+                        },
+                        "text"                    : "If you checked off any problems, how difficult have these problems made it for you to do your work, take care of things at home, or get along with other people?",
+                        "number_of_questions"     : 4,
+                        "questions"               : []
+                }
+        ]
+}
+
+
+gad7 = {
+        "tag"        : "GAD-7",
+        "name"       : "Generalized Anxiety Disorder 7-item Scale",
+        "description": "",
+        "elements"   : [
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "integer_range",
+                        "question_group_type_data": {
+                                "minimum"    : 0,
+                                "maximum"    : 3,
+                                "step"       : 1,
+                                "initial"    : 3,
+                                "labels"     : [
+                                        "Not at all sure",
+                                        "Several days",
+                                        "Over half the days",
+                                        "Nearly every day"
+                                ],
+                                "annotations": None
+                        },
+                        "text"                    : "Over the last 2 weeks, how often have you been bothered by the following problems?",
+                        "number_of_questions"     : 7,
+                        "questions"               : [
+                                {
+                                        "number"   : "1",
+                                        "text"     : "Feeling nervous, anxious, or on edge",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "2",
+                                        "text"     : "Not being able to stop or control worrying",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "3",
+                                        "text"     : "Worrying too much about different things",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "4",
+                                        "text"     : "Trouble relaxing",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "5",
+                                        "text"     : "Being so restless that it's hard to sit still",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "6",
+                                        "text"     : "Becoming easily annoyed or irritable",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "7",
+                                        "text"     : "Feeling afraid as if something awful might happen",
+                                        "help_text": None
+                                }
+                        ]
+                },
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "exclusive_choices",
+                        "question_group_type_data": {
+                                "number_of_choices": 4,
+                                "initial"          : None,
+                                "labels"           : ["Not difficult at all", "Somewhat difficult",
+                                                      "Very difficult", "Extremely difficult"],
+                        },
+                        "text"                    : "If you checked off any problems, how difficult have these made it for you to do your work, take care of things at home, or get along with other people?",
+                        "number_of_questions"     : 4,
+                        "questions"               : []
+                }
+        ]
+}
+
+survey_list = [semcd6, rand36, phq9, gad7]
+
 
 def _s(s: str):
     if debug: print(f"_s({s})")
