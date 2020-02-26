@@ -1069,6 +1069,9 @@ class FiniteChoiceQuestion(QuestionType):
     ModelHelper.register(_name, 'num_possibilities', 75, to_filter=True)
     ModelHelper.register(_name, 'initial', 75, to_filter=True)
 
+    def default_labels(self):
+        return json.dumps([str(n) for n in range(1, self.num_possibilities + 1)])
+
 
 class IntRangeQuestion(FiniteChoiceQuestion):
     _name = 'IntRangeQuestion'  # internal name
@@ -1116,7 +1119,7 @@ class BooleanChoiceQuestion(FiniteChoiceQuestion):
     _parent = 'FiniteChoiceQuestion'  # internal name
 
     question_group_type = "boolean"
-    default_labels = json.dumps(["yes", "no"])
+    _default_labels = json.dumps(["yes", "no"])
 
     labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
                                related_name='boolean_choice_questions',
@@ -1135,6 +1138,9 @@ class BooleanChoiceQuestion(FiniteChoiceQuestion):
     @staticmethod
     def validate_value(self, value: bool) -> bool:
         return isinstance(value, bool)
+
+    def default_labels(self):
+        return self._default_labels
 
 
 class ExclusiveChoiceQuestion(FiniteChoiceQuestion):

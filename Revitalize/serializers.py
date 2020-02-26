@@ -405,6 +405,10 @@ class QuestionSerializerDisplay(serializers.ModelSerializer):
         model = Question
         fields = ['id', 'number', 'optional', 'text', 'help_text', 'screen_reader_text', 'annotations', 'display']
 
+    def to_representation(self, instance):
+        serializer = self.get_serializer(instance.__class__)
+        return serializer(instance, context=self.context).data
+
     def get_text(self, q: Question):
         return _str(q.text)
 
@@ -452,12 +456,16 @@ class IntRangeQuestionSerializerDisplay(serializers.ModelSerializer):
 
     minimum = serializers.SerializerMethodField()
     maximum = serializers.SerializerMethodField()
-    step = serializers.SerializerMethodField()
-    initial = serializers.SerializerMethodField()
 
     class Meta:
         model = IntRangeQuestion
         fields = ['minimum', 'maximum', 'step', 'initial', 'labels', 'annotations']
+
+    def get_labels(self, q: BooleanChoiceQuestion):
+        if StringGroup.size(q.labels) < 2:
+            return q.default_labels()
+        else:
+            return _str(q.labels)
 
     def get_minimum(self, q: IntRangeQuestion):
         return q.min
@@ -476,11 +484,11 @@ class BooleanChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
 
     class Meta:
         model = BooleanChoiceQuestion
-        fields = ['labels', 'annotations']
+        fields = ['initial', 'labels', 'annotations']
 
     def get_labels(self, q: BooleanChoiceQuestion):
         if StringGroup.size(q.labels) < 2:
-            return q.default_labels
+            return q.default_labels()
         else:
             return _str(q.labels)
 
@@ -499,7 +507,7 @@ class ExclusiveChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
 
     def get_labels(self, q: ExclusiveChoiceQuestion):
         if StringGroup.size(q.labels) < 2:
-            return q.default_labels
+            return q.default_labels()
         else:
             return _str(q.labels)
 
@@ -616,7 +624,10 @@ class QuestionGroupSerializerDisplay(serializers.ModelSerializer):
         return qg.questions.count()
 
     def get_questions(self, qg: QuestionGroup):
-        return QuestionSerializerDisplay(qg.questions.order_by('number'), many=True).data
+        questions = sorted(Question.objects.filter(group=qg.pk).all(), key= lambda q: q.number)
+        print(questions)
+        ser = QuestionSerializerDisplay(questions, many=True)
+        return ser.data
 
     def get_question_group_type_data(self, qg: QuestionGroup):  # TODO
         data = qg.data()
@@ -625,23 +636,23 @@ class QuestionGroupSerializerDisplay(serializers.ModelSerializer):
 
         if data is not None:
             if qg.type is qg.DataType.TEXT.value:
-                serializer = TextQuestionSerializer(data, many=False)
+                serializer = TextQuestionSerializerDisplay(data, many=False)
             elif qg.type is qg.DataType.INT.value:
-                serializer = IntQuestionSerializer(data, many=False)
+                serializer = IntQuestionSerializerDisplay(data, many=False)
             elif qg.type is qg.DataType.FLOAT.value:
-                serializer = FloatQuestionSerializer(data, many=False)
+                serializer = FloatQuestionSerializerDisplay(data, many=False)
             elif qg.type is qg.DataType.INT_RANGE.value:
-                serializer = IntRangeQuestionSerializer(data, many=False)
+                serializer = IntRangeQuestionSerializerDisplay(data, many=False)
             elif qg.type is qg.DataType.BOOLEAN.value:
-                serializer = BooleanChoiceQuestionSerializer(data, many=False)
+                serializer = BooleanChoiceQuestionSerializerDisplay(data, many=False)
             elif qg.type is qg.DataType.EXCLUSIVE.value:
-                serializer = ExclusiveChoiceQuestionSerializer(data, many=False)
+                serializer = ExclusiveChoiceQuestionSerializerDisplay(data, many=False)
             elif qg.type is qg.DataType.CHOICES.value:
-                serializer = MultiChoiceQuestionSerializer(data, many=False)
+                serializer = MultiChoiceQuestionSerializerDisplay(data, many=False)
             elif qg.type is qg.DataType.FLOAT_RANGE.value:
-                serializer = FloatRangeQuestionSerializer(data, many=False)
+                serializer = FloatRangeQuestionSerializerDisplay(data, many=False)
 
-        annotations = self.get_annotations(qg)
+        #annotations = self.get_annotations(qg)
 
         return serializer.data if serializer is not None else None
 
