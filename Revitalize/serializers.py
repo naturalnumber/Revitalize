@@ -475,6 +475,7 @@ class IntRangeQuestionSerializerDisplay(serializers.ModelSerializer):
 
 class BooleanChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
     labels = serializers.SerializerMethodField()
+    annotations = serializers.SerializerMethodField()
 
     # question = QuestionSerializer(many=False)
 
@@ -494,6 +495,7 @@ class BooleanChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
 
 class ExclusiveChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
     labels = serializers.SerializerMethodField()
+    annotations = serializers.SerializerMethodField()
 
     # question = QuestionSerializer(many=False) TODO
 
