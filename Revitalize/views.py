@@ -1,6 +1,7 @@
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from Revitalize.serializers import *
 
@@ -13,15 +14,15 @@ def _m(m: str):
 
 
 def _r(m: str, s: status):
-    return ResponseType(_m(m), s)
+    return Response(_m(m), s)
 
 
 def _ok(m: str):
-    return ResponseType(_m(m), status.HTTP_200_OK)
+    return Response(_m(m), status.HTTP_200_OK)
 
 
 def _bad(m: str):
-    return ResponseType(_m(m), status.HTTP_400_BAD_REQUEST)
+    return Response(_m(m), status.HTTP_400_BAD_REQUEST)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -122,7 +123,9 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
 
     @action(detail=True, methods=['POST'])
-    def submit(self, request, pk=None):
+    def post(self, request, pk=None):
+        #print(pk)
+        #print(request)
         try:
             if 'time' not in request.data:
                 return _bad("Must provide a time.")
@@ -153,11 +156,11 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
             try:
                 submission.process(submission.validate())
             except ValidationError as e:
-                return ResponseType(_m(f"Could not validate submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
+                return Response(_m(f"Could not validate submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
-            return ResponseType(response, status=status.HTTP_201_CREATED)
+            return Response(response, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return ResponseType(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
+            return Response(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
 
 class MedicalLabViewSet(viewsets.ModelViewSet):
