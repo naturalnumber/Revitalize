@@ -756,7 +756,7 @@ class QuestionGroup(FormElement):
     _name = 'QuestionGroup'  # internal name
     _parent = 'FormElement'  # internal name
 
-    element_type = "question"
+    element_type = "question_group"
 
     class DataType(models.TextChoices):
         UNKNOWN = '?', _('Unknown')
