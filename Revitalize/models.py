@@ -207,6 +207,10 @@ class StringGroup(models.Model):
 
         return -1
 
+    @staticmethod
+    def as_structure(value):
+        return json.loads(value)
+
 
 
 

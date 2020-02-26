@@ -457,11 +457,13 @@ class IntRangeQuestionSerializerDisplay(serializers.ModelSerializer):
         model = IntRangeQuestion
         fields = ['minimum', 'maximum', 'step', 'initial', 'labels', 'annotations']
 
-    def get_labels(self, q: BooleanChoiceQuestion):
+    def get_labels(self, q: IntRangeQuestion):
         if StringGroup.size(q.labels) < 2:
-            return q.default_labels()
+            vals = json.loads(q.default_labels())
         else:
-            return _str(q.labels)
+            vals = json.loads(_str(q.labels))
+
+        return vals
 
     def get_minimum(self, q: IntRangeQuestion):
         return q.min
@@ -485,9 +487,11 @@ class BooleanChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
 
     def get_labels(self, q: BooleanChoiceQuestion):
         if StringGroup.size(q.labels) < 2:
-            return q.default_labels()
+            vals = json.loads(q.default_labels())
         else:
-            return _str(q.labels)
+            vals = json.loads(_str(q.labels))
+
+        return vals
 
     def get_annotations(self, q: BooleanChoiceQuestion):
         return _str(q.group.annotations)
@@ -505,9 +509,11 @@ class ExclusiveChoiceQuestionSerializerDisplay(serializers.ModelSerializer):
 
     def get_labels(self, q: ExclusiveChoiceQuestion):
         if StringGroup.size(q.labels) < 2:
-            return q.default_labels()
+            vals = json.loads(q.default_labels())
         else:
-            return _str(q.labels)
+            vals = json.loads(_str(q.labels))
+
+        return vals
 
     def get_annotations(self, q: ExclusiveChoiceQuestion):
         return _str(q.group.annotations)
@@ -623,7 +629,6 @@ class QuestionGroupSerializerDisplay(serializers.ModelSerializer):
 
     def get_questions(self, qg: QuestionGroup):
         questions = sorted(Question.objects.filter(group=qg.pk).all(), key= lambda q: q.number)
-        print(questions)
         ser = QuestionSerializerDisplay(questions, many=True)
         return ser.data
 
