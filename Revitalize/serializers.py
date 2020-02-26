@@ -405,10 +405,6 @@ class QuestionSerializerDisplay(serializers.ModelSerializer):
         model = Question
         fields = ['id', 'number', 'optional', 'text', 'help_text', 'screen_reader_text', 'annotations', 'display']
 
-    def to_representation(self, instance):
-        serializer = self.get_serializer(instance.__class__)
-        return serializer(instance, context=self.context).data
-
     def get_text(self, q: Question):
         return _str(q.text)
 
