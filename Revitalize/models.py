@@ -892,11 +892,12 @@ class QuestionGroup(FormElement):
 
             if print_debug: print(f"\trespond q: {q}")
 
-            value = q["value"]
+            value = q["response"]
 
             if print_debug: print(f"\trespond value: {value}")
 
             try:
+                value = self.data().force_value_type(value)
                 self.data().validate_value(value)
 
                 if print_debug: print(f"\trespond value: valid")
@@ -996,6 +997,9 @@ class QuestionType(ModelBase):
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
 
+    def force_value_type(self, value):
+        raise ValidationError("Not Implemented")
+
     def validate_value(self, value):
         raise ValidationError("Not Implemented")
 
@@ -1030,6 +1034,11 @@ class TextQuestion(SingleInputQuestion):
     ModelHelper.register(_name, 'min_length', 75, to_filter=True)
     ModelHelper.register(_name, 'max_length', 75, to_filter=True)
 
+    def force_value_type(self, value):
+        if not isinstance(value, str):
+            return str(value)
+        return value
+
     def validate_value(self, value: str) -> bool:
         return self.min_length < len(value) < self.max_length
 
@@ -1054,6 +1063,11 @@ class IntQuestion(SingleInputQuestion):
     ModelHelper.register(_name, 'max_length', 75, to_filter=True)
     ModelHelper.register(_name, 'min', 75, to_filter=True)
     ModelHelper.register(_name, 'max', 75, to_filter=True)
+
+    def force_value_type(self, value):
+        if not isinstance(value, int):
+            return int(value)
+        return value
 
     def validate_value(self, value: int) -> bool:
         return self.min < value < self.max
@@ -1080,6 +1094,11 @@ class FloatQuestion(SingleInputQuestion):
     ModelHelper.register(_name, 'min', 75, to_filter=True)
     ModelHelper.register(_name, 'max', 75, to_filter=True)
 
+    def force_value_type(self, value):
+        if not isinstance(value, float):
+            return float(value)
+        return value
+
     def validate_value(self, value: float) -> bool:
         return self.min < value < self.max
 
@@ -1098,6 +1117,11 @@ class FiniteChoiceQuestion(QuestionType):
     ModelHelper.inherit(_parent, _name)
     ModelHelper.register(_name, 'num_possibilities', 75, to_filter=True)
     ModelHelper.register(_name, 'initial', 75, to_filter=True)
+
+    def force_value_type(self, value):
+        if not isinstance(value, int):
+            return int(value)
+        return value
 
     def default_labels(self):
         return json.dumps([str(n) for n in range(1, self.num_possibilities + 1)])
@@ -1127,6 +1151,11 @@ class IntRangeQuestion(FiniteChoiceQuestion):
     ModelHelper.register(_name, 'min', 75, to_filter=True)
     ModelHelper.register(_name, 'max', 75, to_filter=True)
     ModelHelper.register(_name, 'step', 75, to_filter=True)
+
+    def force_value_type(self, value):
+        if not isinstance(value, int):
+            return int(value)
+        return value
 
     def validate_value(self, data: int):
         if not isinstance(data, int):
@@ -1164,6 +1193,11 @@ class BooleanChoiceQuestion(FiniteChoiceQuestion):
     ModelHelper.register(_name, 'group', 85, to_serialize=False, foreign=QuestionGroup)
     ModelHelper.register(_name, 'labels', 70, text_type='JSON', foreign=StringGroup)
 
+    def force_value_type(self, value):
+        if not isinstance(value, bool):
+            return bool(value)
+        return value
+
     #  This is not very useful but is required to fit the expected interface
     @staticmethod
     def validate_value(self, value: bool) -> bool:
@@ -1191,6 +1225,11 @@ class ExclusiveChoiceQuestion(FiniteChoiceQuestion):
     ModelHelper.inherit(_parent, _name)
     ModelHelper.register(_name, 'group', 85, to_serialize=False, foreign=QuestionGroup)
     ModelHelper.register(_name, 'labels', 70, text_type='JSON', foreign=StringGroup)
+
+    def force_value_type(self, value):
+        if not isinstance(value, int):
+            return int(value)
+        return value
 
     def validate_value(self, value: int) -> bool:
         return 0 <= value <= self.num_possibilities
@@ -1229,22 +1268,15 @@ class MultiChoiceQuestion(FiniteChoiceQuestion):
             n >>= 1
         return count
 
+    def force_value_type(self, value):
+        if not isinstance(value, int):
+            return int(value)
+        return value
+
     def validate_value(self, value: int) -> bool:
         if self.min_choices > 0:
             return (0 < value < 2 ** self.max_choices) \
                    and self.count_bits(value) < self.max_choices
-
-    def validate_value(self, data: float):
-        if not isinstance(data, float):
-            try:
-                value = float(data)
-            except ValueError:
-                raise ValidationError(_("Expected float, received %(value)") % {"value": value})
-        else:
-            value = data
-        if not (self.min < data < self.max):
-            raise ValidationError(_("Value %(value) is out of range: %(min) - %(max)")
-                                  % {"value": value, "min": self.min, "max": self.max})
 
 
 class ContinuousChoiceQuestion(QuestionType):
@@ -1261,6 +1293,23 @@ class ContinuousChoiceQuestion(QuestionType):
     ModelHelper.inherit(_parent, _name)
     ModelHelper.register(_name, 'range', 75, to_filter=True)
     ModelHelper.register(_name, 'initial', 75, to_filter=True)
+
+    def force_value_type(self, value):
+        if not isinstance(value, float):
+            return float(value)
+        return value
+
+    def validate_value(self, data: float):
+        if not isinstance(data, float):
+            try:
+                value = float(data)
+            except ValueError:
+                raise ValidationError(_("Expected float, received %(value)") % {"value": value})
+        else:
+            value = data
+        if not (self.min < data < self.max):
+            raise ValidationError(_("Value %(value) is out of range: %(min) - %(max)")
+                                  % {"value": value, "min": self.min, "max": self.max})
 
 
 class FloatRangeQuestion(ContinuousChoiceQuestion):
@@ -1286,6 +1335,11 @@ class FloatRangeQuestion(ContinuousChoiceQuestion):
     ModelHelper.register(_name, 'labels', 70, text_type='JSON', foreign=StringGroup)
     ModelHelper.register(_name, 'min', 75, to_filter=True)
     ModelHelper.register(_name, 'max', 75, to_filter=True)
+
+    def force_value_type(self, value):
+        if not isinstance(value, float):
+            return float(value)
+        return value
 
     def validate_value(self, data: float):
         if not isinstance(data, float):
