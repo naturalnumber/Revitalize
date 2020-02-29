@@ -9,7 +9,8 @@ import pytz
 
 # Helper methods
 
-print_debug = True
+print_debug = False
+print_debug2 = True
 
 
 def _m(m: str):
@@ -127,11 +128,11 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['POST'])
     def submit(self, request, pk=None):
-        if print_debug: print(pk)
+        if print_debug or print_debug2: print(f"Submission received for form #{pk}")
         if print_debug: print(request)
         if print_debug: print(dir(request))
         if print_debug: print(request.data)
-        SurveyViewSetFrontEnd.last_request = request
+        #SurveyViewSetFrontEnd.last_request = request
         try:
             if 'data' not in dir(request):
                 return _bad("Must provide submission data.")
@@ -152,7 +153,7 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
             if print_debug: print(form)
 
             submission_data = request.data
-            if print_debug: print(submission_data)
+            if print_debug or print_debug2: print(submission_data)
             if print_debug: print(type(submission_data))
 
             if 'time' in dir(request):
@@ -181,12 +182,15 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
                 if print_debug: print('check 2')
                 submission.process(submission.validate())
             except ValidationError as e:
-                if print_debug: print(f"Validation: {e}")
+                if print_debug or print_debug2: print(f"Validation: {e}")
                 return Response(_m(f"Could not validate submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
-            return Response(response, status=status.HTTP_201_CREATED)
+            if print_debug: print(f"status.HTTP_201_CREATED = {status.HTTP_201_CREATED}")
+            to_send = Response(response, status=status.HTTP_201_CREATED)
+            if print_debug or print_debug2: print(to_send)
+            return to_send
         except Exception as e:
-            if print_debug: print(e)
+            if print_debug or print_debug2: print(e)
             return Response(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
 
