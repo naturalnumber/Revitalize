@@ -153,7 +153,7 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
             if print_debug: print(form)
 
             submission_data = request.data
-            if print_debug or print_debug2: print(submission_data)
+            if print_debug or print_debug2: print(f"submission_data = {submission_data} \n... {dict(submission_data)}")
             if print_debug: print(type(submission_data))
 
             if 'time' in dir(request):
@@ -166,24 +166,30 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
 
             if isinstance(submission_data, dict):
                 raw_data = json.dumps(submission_data)
+                if print_debug or print_debug2: print(f"dict -> raw_data = {raw_data}")
             elif isinstance(submission_data, str):
                 raw_data = submission_data
+                if print_debug or print_debug2: print(f"str -> raw_data = {raw_data}")
             else:
-                raw_data = str(submission_data)
+                raw_data = submission_data
+                if print_debug or print_debug2: print(f"? -> raw_data = {raw_data}")
+
+
 
             submission = Submission.objects.create(user=user, form=form, time=time, raw_data=raw_data)
             if print_debug: print(submission)
 
-            serializer = SubmissionSerializer(submission, many=False)
-
-            response = {'message': 'Submission received', 'result': serializer.data}
-
             try:
-                if print_debug: print('check 2')
+                if print_debug or print_debug2: print('check 2')
                 submission.process(submission.validate())
+                if print_debug or print_debug2: print('check 3')
             except ValidationError as e:
                 if print_debug or print_debug2: print(f"Validation: {e}")
                 return Response(_m(f"Could not validate submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
+
+            serializer = SubmissionSerializer(submission, many=False)
+
+            response = {'message': 'Submission received', 'result': serializer.data}
 
             if print_debug: print(f"status.HTTP_201_CREATED = {status.HTTP_201_CREATED}")
             to_send = Response(response, status=status.HTTP_201_CREATED)

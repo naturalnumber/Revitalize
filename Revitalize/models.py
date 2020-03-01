@@ -10,7 +10,7 @@ from rest_framework.utils import json
 from Revitalize.data_analysis_system import DataAnalysisSystem
 
 
-print_debug = False
+print_debug = True
 
 
 def validate_json(j: str):
@@ -875,7 +875,7 @@ class QuestionGroup(FormElement):
         return self.data_class().objects.get(group=self.pk)
 
     def respond(self, submission_data: dict, submission: 'Submission', data: dict):
-        if print_debug: print(f"respond({submission_data}, {submission}, {data})")
+        if print_debug: print(f"respond({submission_data},\n{submission},\n{data})")
 
         if "questions" not in data.keys():
             raise KeyError("questions")
@@ -892,12 +892,12 @@ class QuestionGroup(FormElement):
 
             if print_debug: print(f"\trespond q: {q}")
 
-            value = q["response"]
+            pvalue = q["response"]
 
-            if print_debug: print(f"\trespond value: {value}")
+            if print_debug: print(f"\trespond value: {pvalue}")
 
             try:
-                value = self.data().force_value_type(value)
+                value = self.data().force_value_type(pvalue)
                 self.data().validate_value(value)
 
                 if print_debug: print(f"\trespond value: valid")
@@ -998,9 +998,11 @@ class QuestionType(ModelBase):
     ModelHelper.inherit(_parent, _name)
 
     def force_value_type(self, value):
+        if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
         raise ValidationError("Not Implemented")
 
-    def validate_value(self, value):
+    def validate_value(self, data):
+        if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
         raise ValidationError("Not Implemented")
 
 
@@ -1036,10 +1038,13 @@ class TextQuestion(SingleInputQuestion):
 
     def force_value_type(self, value):
         if not isinstance(value, str):
+            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return str(value)
         return value
 
-    def validate_value(self, value: str) -> bool:
+    def validate_value(self, data: str) -> bool:
+        if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
+        value = data
         return self.min_length < len(value) < self.max_length
 
 
@@ -1066,10 +1071,13 @@ class IntQuestion(SingleInputQuestion):
 
     def force_value_type(self, value):
         if not isinstance(value, int):
+            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return int(value)
         return value
 
-    def validate_value(self, value: int) -> bool:
+    def validate_value(self, data: int) -> bool:
+        if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
+        value = data
         return self.min < value < self.max
 
 
@@ -1096,10 +1104,13 @@ class FloatQuestion(SingleInputQuestion):
 
     def force_value_type(self, value):
         if not isinstance(value, float):
+            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return float(value)
         return value
 
-    def validate_value(self, value: float) -> bool:
+    def validate_value(self, data: float) -> bool:
+        if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
+        value = data
         return self.min < value < self.max
 
 
@@ -1120,6 +1131,7 @@ class FiniteChoiceQuestion(QuestionType):
 
     def force_value_type(self, value):
         if not isinstance(value, int):
+            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return int(value)
         return value
 
@@ -1154,21 +1166,27 @@ class IntRangeQuestion(FiniteChoiceQuestion):
 
     def force_value_type(self, value):
         if not isinstance(value, int):
+            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return int(value)
         return value
 
     def validate_value(self, data: int):
+        if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
         if not isinstance(data, int):
             try:
                 value = int(data)
-            except ValueError:
-                raise ValidationError(_("Expected int, received %(value)") % {"value": value})
+                if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int so {data} -> {value} {type(value)}")
+            except ValueError as e:
+                if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int -> ValueError {e}")
+                raise ValidationError(_("Expected int, received %(value) %(value_error)") % {"value": value, "value_error": e.__str__()})
         else:
             value = data
-        if not (self.min < data < self.max):
+        if not (self.min <= value <= self.max):
+            if print_debug: print(f"{self._name}.validate_value: {self.min} >< {data} >< {self.max} -> out of range")
             raise ValidationError(_("Value %(value) is out of range: %(min) - %(max)")
                                   % {"value": value, "min": self.min, "max": self.max})
-        elif not (self.step == 1 or value - self.min % self.step == 0):
+        elif not (self.step == 1 or (value - self.min % self.step) == 0):
+            if print_debug: print(f"{self._name}.validate_value: {data} - {self.min} % {self.step} =/= 0 -> impossible value")
             raise ValidationError(_("Value %(value) is not allowed with step size %(step)")
                                   % {"value": value, "step": self.step})
 
@@ -1195,12 +1213,15 @@ class BooleanChoiceQuestion(FiniteChoiceQuestion):
 
     def force_value_type(self, value):
         if not isinstance(value, bool):
+            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return bool(value)
         return value
 
     #  This is not very useful but is required to fit the expected interface
     @staticmethod
-    def validate_value(self, value: bool) -> bool:
+    def validate_value(self, data: bool) -> bool:
+        if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
+        value = data
         return isinstance(value, bool)
 
     def default_labels(self):
@@ -1228,10 +1249,13 @@ class ExclusiveChoiceQuestion(FiniteChoiceQuestion):
 
     def force_value_type(self, value):
         if not isinstance(value, int):
+            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return int(value)
         return value
 
-    def validate_value(self, value: int) -> bool:
+    def validate_value(self, data: int) -> bool:
+        if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
+        value = data
         return 0 <= value <= self.num_possibilities
 
 
@@ -1270,10 +1294,13 @@ class MultiChoiceQuestion(FiniteChoiceQuestion):
 
     def force_value_type(self, value):
         if not isinstance(value, int):
+            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return int(value)
         return value
 
-    def validate_value(self, value: int) -> bool:
+    def validate_value(self, data: int) -> bool:
+        if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
+        value = data
         if self.min_choices > 0:
             return (0 < value < 2 ** self.max_choices) \
                    and self.count_bits(value) < self.max_choices
@@ -1296,10 +1323,12 @@ class ContinuousChoiceQuestion(QuestionType):
 
     def force_value_type(self, value):
         if not isinstance(value, float):
+            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return float(value)
         return value
 
     def validate_value(self, data: float):
+        if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
         if not isinstance(data, float):
             try:
                 value = float(data)
@@ -1307,7 +1336,7 @@ class ContinuousChoiceQuestion(QuestionType):
                 raise ValidationError(_("Expected float, received %(value)") % {"value": value})
         else:
             value = data
-        if not (self.min < data < self.max):
+        if not (self.min <= data <= self.max):
             raise ValidationError(_("Value %(value) is out of range: %(min) - %(max)")
                                   % {"value": value, "min": self.min, "max": self.max})
 
@@ -1338,10 +1367,12 @@ class FloatRangeQuestion(ContinuousChoiceQuestion):
 
     def force_value_type(self, value):
         if not isinstance(value, float):
+            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return float(value)
         return value
 
     def validate_value(self, data: float):
+        if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
         if not isinstance(data, float):
             try:
                 value = float(data)
@@ -1349,7 +1380,7 @@ class FloatRangeQuestion(ContinuousChoiceQuestion):
                 raise ValidationError(_("Expected float, received %(value)") % {"value": value})
         else:
             value = data
-        if not (self.min < data < self.max):
+        if not (self.min <= data <= self.max):
             raise ValidationError(_("Value %(value) is out of range: %(min) - %(max)")
                                   % {"value": value, "min": self.min, "max": self.max})
 
