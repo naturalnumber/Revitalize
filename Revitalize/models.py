@@ -1217,7 +1217,6 @@ class BooleanChoiceQuestion(FiniteChoiceQuestion):
         return value
 
     #  This is not very useful but is required to fit the expected interface
-    @staticmethod
     def validate_value(self, data: bool) -> bool:
         if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
         value = data
