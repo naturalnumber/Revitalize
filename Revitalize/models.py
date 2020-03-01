@@ -625,7 +625,7 @@ class Form(Displayable):
             lab = MedicalLab.objects.create(form=self.pk)
 
     def respond(self, data: dict, submission: 'Submission'):
-        if print_debug: print(f"respond({data}, {submission})")
+
         if "elements" not in data.keys():
             raise KeyError("elements")
 
@@ -875,7 +875,6 @@ class QuestionGroup(FormElement):
         return self.data_class().objects.get(group=self.pk)
 
     def respond(self, submission_data: dict, submission: 'Submission', data: dict):
-        if print_debug: print(f"respond({submission_data},\n{submission},\n{data})")
 
         if "questions" not in data.keys():
             raise KeyError("questions")
