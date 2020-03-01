@@ -4,11 +4,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from Revitalize.serializers import *
-
+from django.utils import timezone
+import pytz
 
 # Helper methods
 
 print_debug = False
+print_debug2 = True
 
 
 def _m(m: str):
@@ -126,12 +128,13 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['POST'])
     def submit(self, request, pk=None):
-        if print_debug: print(pk)
+        if print_debug or print_debug2: print(f"Submission received for form #{pk}")
         if print_debug: print(request)
+        if print_debug: print(dir(request))
+        if print_debug: print(request.data)
+        #SurveyViewSetFrontEnd.last_request = request
         try:
-            if 'time' not in request.data:
-                return _bad("Must provide a time.")
-            if 'submission_data' not in request.data:
+            if 'data' not in dir(request):
                 return _bad("Must provide submission data.")
             if pk is None:
                 return _bad("No key provided.")
@@ -149,28 +152,51 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
             form = Form.objects.get(id=pk)
             if print_debug: print(form)
 
-            time = request.data['time']
-            if print_debug: print(time)
-
-            submission_data = request.data['submission_data']
-            if print_debug: print(submission_data)
+            submission_data = request.data
+            if print_debug or print_debug2: print(f"submission_data = {submission_data} \n... {dict(submission_data)}")
             if print_debug: print(type(submission_data))
 
-            submission = Submission.objects.create(user=user, form=form, time=time, raw_data=submission_data)
+            if 'time' in dir(request):
+                time = request.data['time']
+            elif 'time' in submission_data:
+                time = submission_data['time']
+            else:
+                time = timezone.now()
+            if print_debug: print(time)
+
+            if isinstance(submission_data, dict):
+                raw_data = json.dumps(submission_data)
+                if print_debug or print_debug2: print(f"dict -> raw_data = {raw_data}")
+            elif isinstance(submission_data, str):
+                raw_data = submission_data
+                if print_debug or print_debug2: print(f"str -> raw_data = {raw_data}")
+            else:
+                raw_data = submission_data
+                if print_debug or print_debug2: print(f"? -> raw_data = {raw_data}")
+
+
+
+            submission = Submission.objects.create(user=user, form=form, time=time, raw_data=raw_data)
             if print_debug: print(submission)
+
+            try:
+                if print_debug or print_debug2: print('check 2')
+                submission.process(submission.validate())
+                if print_debug or print_debug2: print('check 3')
+            except ValidationError as e:
+                if print_debug or print_debug2: print(f"Validation: {e}")
+                return Response(_m(f"Could not validate submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
             serializer = SubmissionSerializer(submission, many=False)
 
             response = {'message': 'Submission received', 'result': serializer.data}
 
-            try:
-                if print_debug: print('check 2')
-                submission.process(submission.validate())
-            except ValidationError as e:
-                return Response(_m(f"Could not validate submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
-
-            return Response(response, status=status.HTTP_201_CREATED)
+            if print_debug: print(f"status.HTTP_201_CREATED = {status.HTTP_201_CREATED}")
+            to_send = Response(response, status=status.HTTP_201_CREATED)
+            if print_debug or print_debug2: print(to_send)
+            return to_send
         except Exception as e:
+            if print_debug or print_debug2: print(e)
             return Response(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
 
