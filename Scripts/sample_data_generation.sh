@@ -9,7 +9,9 @@ echo "Generating Test Users"
 
 echo "
 from django.contrib.auth.models import User;
-user = User.objects.create_user('TesterOne', 'one@tester.com','test1234');
+passTemp = User.objects.make_random_password(15)
+print(passTemp);
+user = User.objects.create_user('TesterOne', User.objects.normalize_email('one@tesTer.com'), passTemp);
 user.first_name = 'One';
 user.last_name = 'One';
 user.save();
