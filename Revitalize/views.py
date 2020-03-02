@@ -75,38 +75,6 @@ class FormViewSet(viewsets.ModelViewSet):
     serializer_class = FormSerializer
     queryset = _model.objects.all()
 
-    # TODO Should this be removed?
-    @action(detail=True, methods=['POST'])
-    def submit(self, request, pk=None):
-        try:
-            if 'time' not in request.data:
-                return _bad("Must provide a time.")
-            if 'submission_data' not in request.data:
-                return _bad("Must provide submission data.")
-
-            # Validate
-
-            # Check for replacement
-
-            #  user = request.user TODO
-            user = User.objects.get(id=1)  # request.user.profile  # TODO
-
-            form = Form.objects.get(id=pk)
-            time = request.data['time']
-            raw_data = request.data['submission_data']
-
-            submission = Submission.objects.create(user=user, form=form, time=time, raw_data=raw_data)
-
-            serializer = SubmissionSerializer(submission, many=False)
-
-            response = {'message': 'Submission received', 'result': serializer.data}
-
-            # Bad input...
-
-            return Response(response, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            return Response(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
-
 
 class SurveyViewSetAll(viewsets.ModelViewSet):
     _model = Survey
@@ -364,8 +332,57 @@ class UserSurveyHistoryViewSet(viewsets.ModelViewSet):
 
 
 class ProfileRetrievalViewSet(viewsets.ModelViewSet):
-    queryset = Profile.objects.all()
+    #queryset = Profile.objects.all()
     serializer_class = ProfileRetrievalSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        #profile: Profile = self.request.user.profile
+        return Profile.objects.filter(user=self.request.user)
+
+    def list_(self, request, *arg, **kwargs):
+        if print_debug or print_debug2: print(f"Profile request received for user")
+        if print_debug: print(request)
+        if print_debug: print(dir(request))
+
+        try:
+            #queryset = User.objects.all()
+            user: User = request.user #get_object_or_404(queryset, pk=request.user)
+
+            if print_debug: print(user)
+
+            serializer = ProfileRetrievalSerializer(user.profile, many=False)
+
+            response = {'message': 'Profile Found', 'result': serializer.data}
+
+            to_send = Response(response, status=status.HTTP_200_OK)
+            if print_debug or print_debug2: print(to_send)
+            return to_send
+        except Exception as e:
+            if print_debug or print_debug2: print(e)
+            return Response(_m(f"Could not access profile ({e})"), status=status.HTTP_400_BAD_REQUEST)
+
+    def retrieve(self, request, *arg, **kwargs):
+        if print_debug or print_debug2: print(f"Profile request received for user")
+        if print_debug: print(request)
+        if print_debug: print(dir(request))
+
+        try:
+            #queryset = User.objects.all()
+            user: User = request.user #get_object_or_404(queryset, pk=request.user)
+
+            if print_debug: print(user)
+
+            serializer = ProfileRetrievalSerializer(user.profile, many=False)
+
+            response = {'message': 'Profile Found', 'result': serializer.data}
+
+            to_send = Response(response, status=status.HTTP_200_OK)
+            if print_debug or print_debug2: print(to_send)
+            return to_send
+        except Exception as e:
+            if print_debug or print_debug2: print(e)
+            return Response(_m(f"Could not access profile ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserIndicatorViewSet(viewsets.ModelViewSet):
