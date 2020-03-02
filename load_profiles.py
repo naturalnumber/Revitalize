@@ -1,4 +1,5 @@
 import Revitalize.models
+from django.contrib.auth import get_user_model
 
 # To load this run:
 # python ./manage.py shell
@@ -9,6 +10,33 @@ import Revitalize.models
 
 debug = False
 
+profile0 = {
+        "user": 1,
+        "first_name": "Adisson",
+        "middle_name": "Dorothy",
+        "last_name": "Ministrator",
+        "date_of_birth": "1971-09-17",
+        "gender": "F",
+        "phone_number": "9025550000",
+        "phone_number_alt": "",
+        "email": "admin@test.com",
+        "street_address": "123 Fake St.",
+        "city": "Charlottetown",
+        "province": "PE",
+        "country": "Canada",
+        "postal_code": "C1A9A9",
+        "ec_first_name": "Emily",
+        "ec_middle_name": "Erica",
+        "ec_last_name": "Gency",
+        "ec_phone_number": "9025550000",
+        "physician": "TestOnePhysician",
+        "points": 0,
+        "personal_message": "Personal Message Admin",
+        "profile_picture": "null",
+        "password_flag": "True",
+        "preferences": "{}"
+}
+
 profile1 = {
         "user": 2,
         "first_name": "One",
@@ -16,7 +44,7 @@ profile1 = {
         "last_name": "A",
         "date_of_birth": "1901-01-11",
         "gender": "M",
-        "phone_number": "9021111111",
+        "phone_number": "9025550011",
         "phone_number_alt": "",
         "email": "one@test.com",
         "street_address": "StreetOne",
@@ -27,14 +55,13 @@ profile1 = {
         "ec_first_name": "ecOneF",
         "ec_middle_name": "ecMid",
         "ec_last_name": "ecLast",
-        "ec_phone_number": "9021110000",
+        "ec_phone_number": "9025550000",
         "physician": "TestOnePhysician",
         "points": 0,
         "personal_message": "PersonalMessageOne",
         "profile_picture": "null",
         "password_flag": "True",
-        "preferences": "{}",
-        "id": 2
+        "preferences": "{}"
 }
 
 
@@ -45,7 +72,7 @@ profile2 = {
         "last_name": "B",
         "date_of_birth": "1902-02-22",
         "gender": "F",
-        "phone_number": "9022222222",
+        "phone_number": "9025550022",
         "phone_number_alt": "",
         "email": "two@test.com",
         "street_address": "StreetTwo",
@@ -62,8 +89,7 @@ profile2 = {
         "personal_message": "PersonalMessageTwo",
         "profile_picture": "null",
         "password_flag": "True",
-        "preferences": "{}",
-        "id": 3
+        "preferences": "{}"
 }
 
 
@@ -74,7 +100,7 @@ profile3 = {
         "last_name": "C",
         "date_of_birth": "1903-03-03",
         "gender": "M",
-        "phone_number": "9023333333",
+        "phone_number": "9025550033",
         "phone_number_alt": "",
         "email": "three@test.com",
         "street_address": "StreetThree",
@@ -91,8 +117,7 @@ profile3 = {
         "personal_message": "PersonalMessageThree",
         "profile_picture": "null",
         "password_flag": "True",
-        "preferences": "{}",
-        "id": 4
+        "preferences": "{}"
 }
 
 
@@ -103,7 +128,7 @@ profile4 = {
         "last_name": "D",
         "date_of_birth": "1904-04-04",
         "gender": "O",
-        "phone_number": "9024444444",
+        "phone_number": "9025550044",
         "phone_number_alt": "",
         "email": "four@test.com",
         "street_address": "StreetFour",
@@ -120,8 +145,7 @@ profile4 = {
         "personal_message": "PersonalMessageFour",
         "profile_picture": "null",
         "password_flag": "True",
-        "preferences": "{}",
-        "id": 5
+        "preferences": "{}"
 }
 
 
@@ -132,7 +156,7 @@ profile5 = {
         "last_name": "E",
         "date_of_birth": "1905-05-05",
         "gender": "F",
-        "phone_number": "9025555555",
+        "phone_number": "9025550055",
         "phone_number_alt": "",
         "email": "five@test.com",
         "street_address": "StreetFive",
@@ -149,14 +173,21 @@ profile5 = {
         "personal_message": "PersonalMessageFive",
         "profile_picture": "null",
         "password_flag": "True",
-        "preferences": "{}",
-        "id": 6
+        "preferences": "{}"
 }
 
-profile_list = [profile1, profile2, profile3, profile4, profile5]
+profile_list = [profile0, profile1, profile2, profile3, profile4, profile5]
 
 
 def load_profiles(p: dict):
+    User = get_user_model()
+
+    try:
+        user = User.objects.get(pk=p['user'])
+    except:
+        user = User.objects.create_superuser(p['first_name'], '', 'cs4820')
+
+    print(f"trying to make: {p['first_name']}")
 
     profile = Revitalize.models.Profile.objects.create(
             user_id=p.__getitem__('user'),
@@ -183,7 +214,6 @@ def load_profiles(p: dict):
             profile_picture=p.__getitem__('profile_picture'),
             password_flag=p.__getitem__('password_flag'),
             preferences=p.__getitem__('preferences'),
-            id=p.__getitem__('id'),
     )
 
     print(f"created: {profile}")

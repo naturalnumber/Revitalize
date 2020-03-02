@@ -3,14 +3,16 @@ from json import JSONDecodeError
 
 from django.contrib.auth.models import User
 from django.db import models
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext as _ # TODO gettext_lazy
 from rest_framework.exceptions import ValidationError
 from rest_framework.utils import json
 
 from Revitalize.data_analysis_system import DataAnalysisSystem
 
 
-print_debug = True
+print_debug = False
+
+print_debug_a = False
 
 
 def validate_json(j: str):
@@ -459,7 +461,11 @@ class Processable(Nameable):
             raise ValidationError("Calculations may not contain __")
 
     def analyse(self, user: User, time: datetime, data: dict, source: 'Submission', testing=False):
+        if print_debug_a: print(f"analyse({user}, {time},\n{data},\n{source}, {testing})")
+
         analysis: dict = json.loads(self.analysis)
+
+        if print_debug_a: print(f"analyse: {analysis}")
 
         points = []  # Possibly needed for recursion
         debug = []
@@ -476,7 +482,7 @@ class Processable(Nameable):
                     debug.append(('outputs', out, "Unknown type"))
                     continue
 
-                if out['type'] == Indicator.internal_name:
+                if out['type'] == Indicator._name:
 
                     if 'calculation' not in out.keys():
                         debug.append(('outputs', out, "No calculation provided"))
@@ -489,7 +495,7 @@ class Processable(Nameable):
                         continue
 
                     # This is here to prevent certain types of injections that should never be possible
-                    if calculation.find('__'):
+                    if calculation.find('__') >= 0:
                         debug.append(('outputs', out, "Calculations may not contain __", calculation))
                         continue
 
@@ -507,7 +513,11 @@ class Processable(Nameable):
 
                         # May need dynamic data addition here...
 
+                        if print_debug_a: print(f"analyse: attempting {data} -> {indicator}")
+
                         value = DataAnalysisSystem.process(calculation, data)
+
+                        if print_debug_a: print(f"analyse: {indicator} <- {value}")
 
                         if value is None:
                             debug.append(('output_indicators', ind_id, "No value"))
@@ -525,6 +535,8 @@ class Processable(Nameable):
 
                         valid = indicator.validate(value)
 
+                        if print_debug_a: print(f"analyse: {value} is valid? {valid}")
+
                         if not valid:
                             debug.append(('output_indicators', ind_id, "Value failed to validate", value))
                             continue
@@ -535,23 +547,38 @@ class Processable(Nameable):
                             time = datetime.today()
                             user = User.objects.get(id=1)
 
+                        p_name = f"{indicator.name} value for {user} at {time}"
+
                         if indicator.is_int():
                             point = IntDataPoint.objects.create(indicator=indicator, time=time, value=value,
                                                                 validated=True, processed=False,
-                                                                user=user, source=source)
+                                                                user=user, source=source, name=p_name)
                         elif indicator.is_float():
                             point = FloatDataPoint.objects.create(indicator=indicator, time=time, value=value,
                                                                   validated=True, processed=False,
-                                                                  user=user, source=source)
+                                                                  user=user, source=source, name=p_name)
 
                         if point is None:
                             debug.append(('output_indicators', ind_id, "Failed to create point", value))
                             continue
 
+                        if print_debug_a: print(f"analyse: {value} -> {point}")
                         points.append(point)
 
                     except Exception as e:
                         debug.append(('outputs', ind_id, e))
+                else:
+                    if print_debug_a: print(f"{out['type']} =/= {Indicator._name}")
+        else:
+            if print_debug_a: print(f"analyse: no outputs")
+
+        if len(debug) > 0:
+            if source.notes is None:
+                source.notes = ""
+            if len(source.notes) > 0:
+                source.notes += "\n\n\n"
+            source.notes += f"analysis at {datetime.utcnow()} had the following debug output: {debug}"
+            if print_debug_a: print(f"analysis at {datetime.utcnow()} had the following debug output: {debug}")
 
         for p in points:
             p.analyse(user, time, data, source)
@@ -625,6 +652,9 @@ class Form(Displayable):
             lab = MedicalLab.objects.create(form=self.pk)
 
     def respond(self, data: dict, submission: 'Submission'):
+        #if print_debug: print(f"respond({data}, {submission})")
+
+        translation = {}
 
         if "elements" not in data.keys():
             raise KeyError("elements")
@@ -667,9 +697,11 @@ class Form(Displayable):
 
                 if print_debug: print(f"\trespond group {group}")
 
-                group.respond(data, submission, e)
+                group.respond(data, submission, e, translation)
             elif print_debug: print(f"\trespond {e['element_type']} =/= {QuestionGroup.element_type}")
         if print_debug: print(f"/respond")
+
+        return translation
 
 
 class Survey(ModelBase):
@@ -874,7 +906,8 @@ class QuestionGroup(FormElement):
     def data(self) -> 'QuestionType':
         return self.data_class().objects.get(group=self.pk)
 
-    def respond(self, submission_data: dict, submission: 'Submission', data: dict):
+    def respond(self, submission_data: dict, submission: 'Submission', data: dict, translation=None):
+        #if print_debug: print(f"respond({submission_data},\n{submission},\n{data})")
 
         if "questions" not in data.keys():
             raise KeyError("questions")
@@ -896,7 +929,7 @@ class QuestionGroup(FormElement):
             if print_debug: print(f"\trespond value: {pvalue}")
 
             try:
-                value = self.data().force_value_type(pvalue)
+                value = self.data().force_value_type(pvalue, translate=True)
                 self.data().validate_value(value)
 
                 if print_debug: print(f"\trespond value: valid")
@@ -920,7 +953,7 @@ class QuestionGroup(FormElement):
 
                 if print_debug: print(f"\trespond question: {question}")
 
-                question.respond(submission, value)
+                question.respond(submission, value, translation)
 
             except (ValidationError, LookupError) as e:
                 errors.append(e)
@@ -979,8 +1012,30 @@ class Question(Displayable):
     ModelHelper.register(_name, 'internal_name', 69)
     ModelHelper.register(_name, 'optional', 65, )
 
-    def respond(self, submission: 'Submission', value):
+    def var_name(self):
+        if self.internal_name is not None and len(self.internal_name) > 0:
+            return self.internal_name
+        elif self.prefix is not None or self.group.prefix is not None:
+            cleaned = ""
+            if self.group.prefix is not None:
+                for c in self.group.prefix:
+                    if c.isalnum() or c in ["_", "-"]:
+                        cleaned += c
+            if len(cleaned) > 0:
+                cleaned += "_"
+            if self.prefix is not None:
+                for c in self.prefix:
+                    if c.isalnum() or c in ["_", "-"]:
+                        cleaned += c
+            if len(cleaned) > 0:
+                return f"q{cleaned}"
+        return f"q{self.group.number}_{self.number}"
+
+    def respond(self, submission: 'Submission', value, translation: dict=None):
         self.group.response_class().objects.create(submission=submission, question=self, value=value)
+
+        if translation is not None:
+            translation[self.var_name()] = value
 
 
 class QuestionType(ModelBase):
@@ -996,7 +1051,7 @@ class QuestionType(ModelBase):
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
 
-    def force_value_type(self, value):
+    def force_value_type(self, value, translate=False):
         if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
         raise ValidationError("Not Implemented")
 
@@ -1035,7 +1090,7 @@ class TextQuestion(SingleInputQuestion):
     ModelHelper.register(_name, 'min_length', 75, to_filter=True)
     ModelHelper.register(_name, 'max_length', 75, to_filter=True)
 
-    def force_value_type(self, value):
+    def force_value_type(self, value, translate=False):
         if not isinstance(value, str):
             if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return str(value)
@@ -1068,7 +1123,7 @@ class IntQuestion(SingleInputQuestion):
     ModelHelper.register(_name, 'min', 75, to_filter=True)
     ModelHelper.register(_name, 'max', 75, to_filter=True)
 
-    def force_value_type(self, value):
+    def force_value_type(self, value, translate=False):
         if not isinstance(value, int):
             if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return int(value)
@@ -1101,7 +1156,7 @@ class FloatQuestion(SingleInputQuestion):
     ModelHelper.register(_name, 'min', 75, to_filter=True)
     ModelHelper.register(_name, 'max', 75, to_filter=True)
 
-    def force_value_type(self, value):
+    def force_value_type(self, value, translate=False):
         if not isinstance(value, float):
             if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return float(value)
@@ -1128,7 +1183,7 @@ class FiniteChoiceQuestion(QuestionType):
     ModelHelper.register(_name, 'num_possibilities', 75, to_filter=True)
     ModelHelper.register(_name, 'initial', 75, to_filter=True)
 
-    def force_value_type(self, value):
+    def force_value_type(self, value, translate=False):
         if not isinstance(value, int):
             if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return int(value)
@@ -1163,11 +1218,14 @@ class IntRangeQuestion(FiniteChoiceQuestion):
     ModelHelper.register(_name, 'max', 75, to_filter=True)
     ModelHelper.register(_name, 'step', 75, to_filter=True)
 
-    def force_value_type(self, value):
+    def force_value_type(self, value, translate=False):
+        data = value
         if not isinstance(value, int):
-            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
-            return int(value)
-        return value
+            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)}, {translate})")
+            data = int(value)
+        if translate:
+            data = self.min + (data - 1) * self.step
+        return data
 
     def validate_value(self, data: int):
         if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
@@ -1210,7 +1268,12 @@ class BooleanChoiceQuestion(FiniteChoiceQuestion):
     ModelHelper.register(_name, 'group', 85, to_serialize=False, foreign=QuestionGroup)
     ModelHelper.register(_name, 'labels', 70, text_type='JSON', foreign=StringGroup)
 
-    def force_value_type(self, value):
+    def force_value_type(self, value, translate=False):
+        if translate:
+            if not isinstance(value, int):
+                if print_debug: print(f"{self._name}.force_value_type({value} {type(value)}, {translate})")
+                value = int(value)
+            return value == 2
         if not isinstance(value, bool):
             if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return bool(value)
@@ -1245,7 +1308,7 @@ class ExclusiveChoiceQuestion(FiniteChoiceQuestion):
     ModelHelper.register(_name, 'group', 85, to_serialize=False, foreign=QuestionGroup)
     ModelHelper.register(_name, 'labels', 70, text_type='JSON', foreign=StringGroup)
 
-    def force_value_type(self, value):
+    def force_value_type(self, value, translate=False):
         if not isinstance(value, int):
             if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return int(value)
@@ -1290,7 +1353,7 @@ class MultiChoiceQuestion(FiniteChoiceQuestion):
             n >>= 1
         return count
 
-    def force_value_type(self, value):
+    def force_value_type(self, value, translate=False):
         if not isinstance(value, int):
             if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return int(value)
@@ -1319,7 +1382,7 @@ class ContinuousChoiceQuestion(QuestionType):
     ModelHelper.register(_name, 'range', 75, to_filter=True)
     ModelHelper.register(_name, 'initial', 75, to_filter=True)
 
-    def force_value_type(self, value):
+    def force_value_type(self, value, translate=False):
         if not isinstance(value, float):
             if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return float(value)
@@ -1363,7 +1426,7 @@ class FloatRangeQuestion(ContinuousChoiceQuestion):
     ModelHelper.register(_name, 'min', 75, to_filter=True)
     ModelHelper.register(_name, 'max', 75, to_filter=True)
 
-    def force_value_type(self, value):
+    def force_value_type(self, value, translate=False):
         if not isinstance(value, float):
             if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return float(value)
@@ -1434,11 +1497,11 @@ class Submission(ModelBase):
 
             if print_debug: print(f"\tprocess 1")
 
-            self.form.respond(data, self)
+            output = self.form.respond(data, self)
 
             if print_debug: print(f"\tprocess form responded")
 
-            self.form.analyse(self.user, self.time, data, self)
+            self.form.analyse(self.user, self.time, output, self)
 
             if print_debug: print(f"\tprocess analysed")
 
@@ -1611,7 +1674,7 @@ class Indicator(Displayable):
         return True
 
     @property
-    def internal_name(self):
+    def type_name(self):
         return self._name
 
 

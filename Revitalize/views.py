@@ -10,7 +10,7 @@ import pytz
 # Helper methods
 
 print_debug = False
-print_debug2 = True
+print_debug2 = False
 
 
 def _m(m: str):

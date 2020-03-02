@@ -177,7 +177,7 @@ semcd6 = {
                 "outputs": [
                         {
                                 "type": "Indicator",
-                                "calculation": "(q1_1 + q1_2 + q1_3 + q1_4 + q1_5 + q1_6)/6"
+                                "calculation": "(q2_1 + q3_1 + q4_1 + q5_1 + q6_1 + q7_1)/6"
                         }
                 ]
         }
@@ -587,8 +587,8 @@ phq9 = {
                         "number"                  : None,
                         "question_group_type"     : "integer_range",
                         "question_group_type_data": {
-                                "minimum"    : 0,
-                                "maximum"    : 3,
+                                "minimum"    : 1,
+                                "maximum"    : 4,
                                 "step"       : 1,
                                 "initial"    : 3,
                                 "labels"     : [
@@ -948,7 +948,7 @@ def load_survey(s: dict):
             elif e["question_group_type"] == "float_range":
                 pass
 
-            m = 0
+            m = 1
             questions = []
             for q in _k(e, "questions", []):
                 print(f"starting #{n}.{m}")
@@ -983,7 +983,7 @@ empty_string_group = _g("{}")
 
 ind = Revitalize.models.Indicator.objects.create(name=_s("semcd6"),
                                                  type=Revitalize.models.Indicator.DataType.FLOAT.value)
-semcd6["analysis"]["id"] = ind.id
+semcd6["analysis"]['outputs'][0]["id"] = ind.id
 
 loaded = [load_survey(s) for s in survey_list]
 
