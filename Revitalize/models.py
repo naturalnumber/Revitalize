@@ -29,14 +29,25 @@ def pre_validate_json(j: str):
         raise ValidationError(e)
 
 
+def _webify_text(s: str):
+    return s.replace("'", "&apos;") if s is not None else None  # html: &apos; Unicode: U+0027
+
+
 class LangCode(models.TextChoices):
     UNKNOWN = '?', _('Unknown')
     ENGLISH = 'EN', _('English')
     FRENCH = 'FR', _('French')
 
 
-def _str(entry, lang=LangCode.ENGLISH, default=None):
-    return entry.value if entry is not None else default
+def _str(entry, lang=LangCode.ENGLISH.value, default=None):
+    s = entry.value if entry is not None else default
+    if lang == LangCode.ENGLISH.value:
+        # English is default
+        pass
+    elif lang == LangCode.FRENCH.value:
+        # TODO
+        pass
+    return _webify_text(s)
 
 
 # This class is just a helper for dealing with some Django features quickly during development
