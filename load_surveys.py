@@ -579,8 +579,8 @@ rand36 = {
 
 phq9 = {
         "tag"        : "PHQ-9",
-        "name"       : "Patient Health Questionnaire",
-        "description": "",
+        "name"       : "Patient Health Questionnaire 9",
+        "description": "The Patient Health Questionnaire 9 is a multipurpose instrument for screening, diagnosing, monitoring and measuring the severity of depression.",
         "elements"   : [
                 {
                         "element_type"            : "question_group",
@@ -659,9 +659,15 @@ phq9 = {
                                 "labels"           : ["Not difficult at all", "Somewhat difficult",
                                                       "Very difficult", "Extremely difficult"],
                         },
-                        "text"                    : "If you checked off any problems, how difficult have these problems made it for you to do your work, take care of things at home, or get along with other people?",
-                        "number_of_questions"     : 4,
-                        "questions"               : []
+                        "text"                    : None,
+                        "number_of_questions"     : 1,
+                        "questions"               : [
+                                {
+                                        "number"   : None,
+                                        "text"     : "If you checked off any problems, how difficult have these problems made it for you to do your work, take care of things at home, or get along with other people?",
+                                        "help_text": None
+                                }
+                        ]
                 }
         ]
 }
@@ -670,7 +676,7 @@ phq9 = {
 gad7 = {
         "tag"        : "GAD-7",
         "name"       : "Generalized Anxiety Disorder 7-item Scale",
-        "description": "",
+        "description": "The Generalized Anxiety Disorder 7-item Scale measures the severity of anxiety.",
         "elements"   : [
                 {
                         "element_type"            : "question_group",
@@ -739,9 +745,15 @@ gad7 = {
                                 "labels"           : ["Not difficult at all", "Somewhat difficult",
                                                       "Very difficult", "Extremely difficult"],
                         },
-                        "text"                    : "If you checked off any problems, how difficult have these made it for you to do your work, take care of things at home, or get along with other people?",
-                        "number_of_questions"     : 4,
-                        "questions"               : []
+                        "text"                    : None,
+                        "number_of_questions"     : 1,
+                        "questions"               : [
+                                {
+                                        "number"   : None,
+                                        "text"     : "If you checked off any problems, how difficult have these made it for you to do your work, take care of things at home, or get along with other people?",
+                                        "help_text": None
+                                }
+                        ]
                 }
         ]
 }
