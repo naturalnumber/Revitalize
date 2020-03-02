@@ -316,3 +316,538 @@ linq = {
         ]
 }
 
+sgrg = {
+        "tag"        : "SGRG",
+        "name"       : "St. George Respiratory Questionnaire",
+        "description": "This questionnaire is designed to help us learn much more about how your breathing is troubling you and how it affects your life.",
+        "elements"   : [
+                {
+                        "element_type": "text",
+                        "name"        : "Intro",
+                        "description" : "Intro Paragraph",
+                        "text"        : "Please read the instructions carefully and ask if you do not understand anything. Do not spend too long deciding about your answers."
+                },
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "exclusive_choices",
+                        "question_group_type_data": {
+                               "number_of_choices": 5,
+                               "initial"          : None,
+                               "labels"           : ["Most days a week", "Several days a week",
+                                                      "A few days a month", "Only with chest infections",
+                                                      "Not at all"],
+                },
+                        "text"                    : "<b>Questions about how much chest trouble you have had over the past 3 months.</b>",
+                        "number_of_questions"     : 4,
+                        "questions"               : [
+                                {
+                                        "number"   : "1",
+                                        "text"     : "Over the past 3 months, I have coughed:",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "2",
+                                        "text"     : "Over the past 3 months, I have brought up phlegm (sputum):",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "3",
+                                        "text"     : "Over the past 3 months, I have had shortness of breath:",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : "4",
+                                        "text"     : "Over the past 3 months, I have had attacks of wheezing:",
+                                        "help_text": None
+                                },
+                        ]
+                },
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "exclusive_choices",
+                        "question_group_type_data": {
+                                "number_of_choices": 5,
+                                "initial"          : None,
+                                "labels"           : ["more than 3 attacks",
+                                                      "3 attacks",
+                                                      "2 attacks",
+                                                      "1 attack"
+                                                      "no attacks"],
+                        },
+                        "number_of_questions"     : 1,
+                        "questions"               : [
+                                {
+                                        "number"   : "5",
+                                        "text"     : "During the past 3 months how many severe or very unpleasant attacks of chest trouble have you had?",
+                                        "help_text": None
+                                }
+                        ]
+                },
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "exclusive_choices",
+                        "question_group_type_data": {
+                                "number_of_choices": 4,
+                                "initial"          : None,
+                                "labels"           : ["a week or more",
+                                                      "3 or more days",
+                                                      "1 or 2 days",
+                                                      "less than a day"],
+                        },
+                        "number_of_questions"     : 1,
+                        "questions"               : [
+                                {
+                                        "number"   : "6",
+                                        "text"     : "How long did the worst attack of chest trouble last? (Go to question 7 if you had no severe attacks)",
+                                        "help_text": None
+                                }
+                        ]
+                },
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "exclusive_choices",
+                        "question_group_type_data": {
+                                "number_of_choices": 5,
+                                "initial"          : None,
+                                "labels"           : ["No good days",
+                                                      "1 or 2 good days",
+                                                      "3 or 4 good days",
+                                                      "nearly every day is good"
+                                                      "every day is good"],
+                        },
+                        "number_of_questions"     : 1,
+                        "questions"               : [
+                                {
+                                        "number"   : "7",
+                                        "text"     : "Over the past 3 months, in an average week, how many good days (with little chest trouble) have you had?",
+                                        "help_text": None
+                                }
+                        ]
+                },
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "boolean",
+                        "question_group_type_data": {
+                                "number_of_choices": 2,
+                                "initial"          : None,
+                                "labels"           : ["Yes, No"],
+                        },
+                        "number_of_questions"     : 1,
+                        "questions"               : [
+                                {
+                                        "number"   : "8",
+                                        "text"     : "If you have a wheeze, is it worse in the morning?",
+                                        "help_text": None
+                                }
+                        ]
+                },
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "exclusive_choices",
+                        "question_group_type_data": {
+                                "number_of_choices": 4,
+                                "initial"          : None,
+                                "labels"           : ["The most important problem I have",
+                                                      "Causes me quite a lot of problems",
+                                                      "Causes me a few problems",
+                                                      "Causes no problem"],
+                        },
+                        "text"                    : "<b>Section 1</b>",
+                        "number_of_questions"     : 1,
+                        "questions"               : [
+                                {
+                                        "number"   : " ",
+                                        "text"     : "How would you describe your chest condition?",
+                                        "help_text": None
+                                }
+                        ]
+                },
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "exclusive_choices",
+                        "question_group_type_data": {
+                                "number_of_choices": 3,
+                                "initial"          : None,
+                                "labels"           : ["My chest trouble made me stop work altogether",
+                                                      "My chest trouble interferes with my work or made me change my work",
+                                                      "My chest trouble does not affect my work"],
+                        },
+                        "number_of_questions"     : 1,
+                        "questions"               : [
+                                {
+                                        "number"   : " ",
+                                        "text"     : "If you have ever had paid employment.",
+                                        "help_text": None
+                                }
+                        ]
+                },
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "boolean",
+                        "question_group_type_data": {
+                                "number_of_choices": 2,
+                                "initial"          : None,
+                                "labels"           : ["Yes, No"],
+                        },
+                        "text"                    : "<b>Section 2</b>"
+                                                    "Questions about what activities usually make you feel breathless <u>these days.</u></b>",
+                        "number_of_questions"     : 7,
+                        "questions"               : [
+                                {
+                                        "number"   : " ",
+                                        "text"     : "Sitting or lying still",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "Getting washed or dressed",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "Walking around the home",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "Walking outside on the level",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "Walking up a flight of stairs",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "Walking up hills",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "Playing sports or games",
+                                        "help_text": None
+                                }
+                        ]
+                },
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "boolean",
+                        "question_group_type_data": {
+                                "number_of_choices": 2,
+                                "initial"          : None,
+                                "labels"           : ["Yes, No"],
+                        },
+                        "text"                    : "<b>Section 3</b>"
+                                                    "<b>Some more questions about your cough and breathlessness <u>these days.</u></b>",
+                        "number_of_questions"     : 6,
+                        "questions"               : [
+                                {
+                                        "number"   : " ",
+                                        "text"     : "My cough hurts",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "My cough makes me tired",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I am breathless when I talk",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I am breathless when I bend over",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "My cough or breathing disturbs my sleep",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I get exhausted easily",
+                                        "help_text": None
+                                }
+                        ]
+                },
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "boolean",
+                        "question_group_type_data": {
+                                "number_of_choices": 2,
+                                "initial"          : None,
+                                "labels"           : ["Yes, No"],
+                        },
+                        "text"                    : "<b>Section 4</b>"
+                                                    "<b>Questions about other effects that your chest trouble may have on you <u>these days.</u></b>",
+                        "number_of_questions"     : 8,
+                        "questions"               : [
+                                {
+                                        "number"   : " ",
+                                        "text"     : "My cough or breathing is embarrassing in public",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "My chest trouble is a nuisance to my family, friends or neighbours",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I get afraid or panic when I cannot get my breath",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I feel that I am not in control of my chest problem",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I do not expect my chest to get any better",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I have become frail or an invalid because of my chest",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "Exercise is not safe for me",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "Everything seems too much of an effort",
+                                        "help_text": None
+                                },
+                        ]
+                },
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "boolean",
+                        "question_group_type_data": {
+                                "number_of_choices": 2,
+                                "initial"          : None,
+                                "labels"           : ["Yes, No"],
+                        },
+                        "text"                    : "<b>Section 5</b>"
+                                                    "<b>Questions about your medication, if you are receiving no medication go straight to section 6.</b>",
+                        "number_of_questions"     : 4,
+                        "questions"               : [
+                                {
+                                        "number"   : " ",
+                                        "text"     : "My medication does not help me very much",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I get embarrassed using my medication in public",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I have unpleasant side effects from my medication",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "My medication interferes with my life a lot",
+                                        "help_text": None
+                                },
+                        ]
+                },
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "boolean",
+                        "question_group_type_data": {
+                                "number_of_choices": 2,
+                                "initial"          : None,
+                                "labels"           : ["Yes, No"],
+                        },
+                        "text"                    : "<b>Section 6</b>"
+                                                    "<b>These are questions about how your activities might be affected by your breathing.</b>",
+                        "number_of_questions"     : 9,
+                        "questions"               : [
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I take a long time to get washed or dressed",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I cannot take a bath or shower, or I take a long time",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I walk slower than other people, or I stop for rests",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "Jobs such as housework take a long time, or I have to stop for rests",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "If I walk up one flight of stairs, I have to go slowly or stop",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "If I hurry or walk fast, I have to stop or slow down",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "My breathing makes it difficult to do things such as walk up hills, carrying things "
+                                                     "up stairs, light gardening such as weeding, dance, play bowls or play golf",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "My breathing makes it difficult to do things such as carry heavy loads, dig the "
+                                                     "garden or shovel snow, jog or walk at 5 miles per hour, play tennis or swim",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "My breathing makes it difficult to do things such as very heavy manual work,"
+                                                     "run, cycle, swim fast or play competitive sports",
+                                        "help_text": None
+                                },
+                        ]
+                },
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "boolean",
+                        "question_group_type_data": {
+                                "number_of_choices": 2,
+                                "initial"          : None,
+                                "labels"           : ["Yes, No"],
+                        },
+                        "text"                    : "<b>Section 7</b>"
+                                                    "<b>We would like to know how your chest <u>usually</u> affects your daily life.</b>",
+                        "number_of_questions"     : 5,
+                        "questions"               : [
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I cannot play sports or games",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I cannot go out for entertainment or recreation",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I cannot go out of the house to do the shopping",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I cannot do housework",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "I cannot move far from my bed or chair",
+                                        "help_text": None
+                                },
+                        ]
+                },
+                {
+                        "element_type"            : "question_group",
+                        "number"                  : None,
+                        "question_group_type"     : "text",
+                        "question_group_type_data": {
+                                "min_length"      : 0,
+                                "max_length"      : 20,
+                                "labels"           : ["Yes, No"],
+                        },
+                        "text"                    : "<b>Here is a list of other activities that your chest trouble may prevent you doing. "
+                                                    "(You do not have to tick these, they are just to remind you of ways in which your breathlessness may affect you):</b>",
+                        "number_of_questions"     : 6,
+                        "questions"               : [
+                                {
+                                        "number"   : " ",
+                                        "text"     : "Going for walks or walking the dog",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "Doing things at home or in the garden",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "Sexual intercourse",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "Going out to church, pub, club or place of entertainment",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "Going out in bad weather or into smoky rooms",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "Visiting family or friends or playing with children",
+                                        "help_text": None
+                                },
+                        ],
+                        "text"                    : "Please write in any other important activities that your chest trouble may stop you doing:",
+                        "text"                    : "Now would you tick in the box (one only) which you think best describes how your chest affects you:",
+                        "number_of_questions": 4,
+                        "questions"          : [
+                                {
+                                        "number"   : " ",
+                                        "text"     : "It does not stop me doing anything I would like to do",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "It stops me doing one or two things I would like to do",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "It stops me doing most of the things I would like to do",
+                                        "help_text": None
+                                },
+                                {
+                                        "number"   : " ",
+                                        "text"     : "It stops me doing everything I would like to do",
+                                        "help_text": None
+                                },
+                        ],
+                        "text"                    : "Thank you for filling in this questionnaire. "
+                                                    "Before you finish would you please check to see that you have answered all the questions.",
+                },
+
+        ]
+}
