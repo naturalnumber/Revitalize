@@ -32,6 +32,7 @@ def pre_validate_json(j: str):
 class LangCode(models.TextChoices):
     UNKNOWN = '?', _('Unknown')
     ENGLISH = 'EN', _('English')
+    FRENCH = 'FR', _('French')
 
 
 def _str(entry, lang=LangCode.ENGLISH, default=None):
