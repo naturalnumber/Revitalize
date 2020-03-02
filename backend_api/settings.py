@@ -136,11 +136,11 @@ USE_L10N = True
 USE_TZ = True
 
 # CORS
-CORS_ORIGIN_ALLOW_ALL = True
+# CORS_ORIGIN_ALLOW_ALL = True
 
-#CORS_ORIGIN_WHITELIST = [
-#        'http://localhost:3000',
-#]
+CORS_ORIGIN_WHITELIST = [
+        'http://localhost:3000',
+]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
