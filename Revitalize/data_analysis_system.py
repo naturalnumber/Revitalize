@@ -1,4 +1,5 @@
 from math import sqrt
+from statistics import mean, mode, median, stdev, variance
 
 
 class DataAnalysisSystem:
@@ -12,7 +13,13 @@ class DataAnalysisSystem:
             'int'         : int,
             'float'       : float,
             'len'         : len,
-            'sqrt'        : sqrt
+            'sqrt'        : sqrt,
+            'average'     : mean,
+            'mean'        : mean,
+            'mode'        : mode,
+            'median'      : median,
+            'stdev'       : stdev,
+            'variance'    : variance
     }
 
     # It is vitally important that no external input is passed to this method as it is impossible to fully prevent

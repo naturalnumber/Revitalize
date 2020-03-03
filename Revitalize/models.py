@@ -9,10 +9,14 @@ from rest_framework.utils import json
 
 from Revitalize.data_analysis_system import DataAnalysisSystem
 
+#def _(s): # TODO
+#    return s
 
 print_debug = False
 
 print_debug_a = False
+
+print_test_data = False
 
 
 def validate_json(j: str):
@@ -227,8 +231,6 @@ class StringGroup(models.Model):
     @staticmethod
     def as_structure(value):
         return json.loads(value)
-
-
 
 
 class ModelBase(models.Model):
@@ -485,19 +487,19 @@ class Processable(Nameable):
         if 'outputs' in analysis.keys():
             for out in analysis['outputs']:
                 if not isinstance(out, dict):
-                    debug.append(('outputs', out, "Not a dictionary"))
+                    debug.append(('outputs', out, 'Not a dictionary'))
                     continue
 
                 out: dict
 
                 if 'type' not in out.keys():
-                    debug.append(('outputs', out, "Unknown type"))
+                    debug.append(('outputs', out, 'Unknown type'))
                     continue
 
                 if out['type'] == Indicator._name:
 
                     if 'calculation' not in out.keys():
-                        debug.append(('outputs', out, "No calculation provided"))
+                        debug.append(('outputs', out, 'No calculation provided'))
                         continue
 
                     calculation: str = out['calculation']
@@ -512,7 +514,7 @@ class Processable(Nameable):
                         continue
 
                     if 'id' not in out.keys():
-                        debug.append(('outputs', out, "No indicator id"))
+                        debug.append(('outputs', out, 'No indicator id'))
                         continue
 
                     ind_id = out['id']
@@ -520,7 +522,7 @@ class Processable(Nameable):
                     try:
                         indicator = Indicator.objects.get(id=ind_id)
                         if indicator is None:
-                            debug.append(('output_indicators', ind_id, "Indicator not found"))
+                            debug.append(('output_indicators', ind_id, 'Indicator not found'))
                             continue
 
                         # May need dynamic data addition here...
@@ -532,7 +534,7 @@ class Processable(Nameable):
                         if print_debug_a: print(f"analyse: {indicator} <- {value}")
 
                         if value is None:
-                            debug.append(('output_indicators', ind_id, "No value"))
+                            debug.append(('output_indicators', ind_id, 'No value'))
                             continue
 
                         if not isinstance(value, int) and not isinstance(value, float):
@@ -663,35 +665,40 @@ class Form(Displayable):
         elif self.is_lab():
             lab = MedicalLab.objects.create(form=self.pk)
 
-    def respond(self, data: dict, submission: 'Submission'):
-        #if print_debug: print(f"respond({data}, {submission})")
-
-        translation = {}
+    def r_validate(self, data: dict, submission: 'Submission') -> bool:
+        if print_debug: print(f"{self.__class__.__name__}.r_validate( ... ) for {self}")
 
         if "elements" not in data.keys():
-            raise KeyError("elements")
+            raise KeyError(f"Key 'elements' for {self} not present")
 
         groups = self.question_groups.order_by('number').all()
 
         if print_debug: print(f"\trespond groups: {groups}")
 
+        errors = []
+        errors_e = []
+        errors_n = []
+
         n = 0
+
         for e in data["elements"]:
+            n += 1
             if not isinstance(e, dict):
-                raise TypeError(f"Element #{n} is not a dictionary. {e}")
+                raise TypeError(f"Entry #{n}: {e} in data for {self} is not the correct type. {type(e) if e is not None else None}")
 
             e: dict
 
-            if print_debug: print(f"\trespond-#{n} e: {e}")
+            if print_debug: print(f"\tr_validate-#{n} e: {e}")
 
             if "element_type" not in e.keys():
-                raise KeyError(f"Element #{n} is missing a type. {e}")
+                raise KeyError(f"Key 'element_type' for {e} not present")
+
+            group: QuestionGroup = None
+            bad_id = None
 
             if e["element_type"] == QuestionGroup.element_type:
-                group: QuestionGroup = None
-                bad_id = None
 
-                if print_debug: print(f"\trespond {e['element_type']} == {QuestionGroup.element_type}")
+                if print_debug: print(f"\tr_validate-#{n} {e['element_type']} == {QuestionGroup.element_type}")
 
                 if "id" in e.keys():
                     group = groups.get(id=e["id"])
@@ -707,10 +714,99 @@ class Form(Displayable):
                         raise LookupError(f"Unable to find question group #{n} with id {bad_id}")
                     raise LookupError(f"Unable to find question group #{n}")
 
-                if print_debug: print(f"\trespond group {group}")
+                if print_debug: print(f"\tr_validate-#{n} group {group}")
 
-                group.respond(data, submission, e, translation)
-            elif print_debug: print(f"\trespond {e['element_type']} =/= {QuestionGroup.element_type}")
+                try:
+                    group.r_validate(data, submission, e)
+                except ValidationError as er:
+                    errors.append(er)
+                    errors_n.append(n)
+                    errors_e.append(e)
+                    continue
+
+            elif print_debug: print(f"\tr_validate-#{n} {e['element_type']} =/= {QuestionGroup.element_type}")
+
+        if len(errors) > 0:
+            thrown = ValidationError(errors)
+            thrown.rev_error_list = errors
+            thrown.rev_error_nums = errors_n
+            thrown.rev_error_elements = errors_e
+            raise thrown
+
+        if print_debug: print(f"/r_validate")
+        return True
+
+    def respond(self, data: dict, submission: 'Submission'):
+        #if print_debug: print(f"respond({data}, {submission})")
+        if print_debug: print(f"{self.__class__.__name__}.respond( ... ) for {self}")
+
+        translation = {'questions' : {'all' : {}}}
+
+        if "elements" not in data.keys():
+            raise KeyError(f"Key 'questions' for {self} not present")
+
+        groups = self.question_groups.order_by('number').all()
+
+        if print_debug: print(f"\trespond groups: {groups}")
+
+        errors = []
+        errors_e = []
+        errors_n = []
+
+        n = 0
+
+        for e in data["elements"]:
+            n += 1
+            if not isinstance(e, dict):
+                raise TypeError(f"Entry #{n}: {e} in data for {self} is not the correct type. {type(e) if e is not None else None}")
+
+            e: dict
+
+            if print_debug: print(f"\trespond-#{n} e: {e}")
+
+            if "element_type" not in e.keys():
+                raise KeyError(f"Key 'element_type' for {e} not present")
+
+            group: QuestionGroup = None
+            bad_id = None
+
+            if e["element_type"] == QuestionGroup.element_type:
+
+                if print_debug: print(f"\trespond-#{n} {e['element_type']} == {QuestionGroup.element_type}")
+
+                if "id" in e.keys():
+                    group = groups.get(id=e["id"])
+
+                    if group is None:
+                        bad_id = e["id"]
+
+                if group is None:
+                    group = groups[n]
+
+                if group is None:
+                    if bad_id is not None:
+                        raise LookupError(f"Unable to find question group #{n} with id {bad_id}")
+                    raise LookupError(f"Unable to find question group #{n}")
+
+                if print_debug: print(f"\trespond-#{n} group {group}")
+
+                try:
+                    group.respond(data, submission, e, translation)
+                except ValidationError as er:
+                    errors.append(er)
+                    errors_n.append(n)
+                    errors_e.append(e)
+                    continue
+
+            elif print_debug: print(f"\trespond-#{n} {e['element_type']} =/= {QuestionGroup.element_type}")
+
+        if len(errors) > 0:
+            thrown = ValidationError(errors)
+            thrown.rev_error_list = errors
+            thrown.rev_error_nums = errors_n
+            thrown.rev_error_elements = errors_e
+            raise thrown
+
         if print_debug: print(f"/respond")
 
         return translation
@@ -799,6 +895,8 @@ class TextElement(FormElement):
 class QuestionGroup(FormElement):
     _name = 'QuestionGroup'  # internal name
     _parent = 'FormElement'  # internal name
+    _default_var_flag = '__to_default'
+    _validated_response_key = "__validated_response"
 
     element_type = "question_group"
 
@@ -918,37 +1016,145 @@ class QuestionGroup(FormElement):
     def data(self) -> 'QuestionType':
         return self.data_class().objects.get(group=self.pk)
 
-    def respond(self, submission_data: dict, submission: 'Submission', data: dict, translation=None):
-        #if print_debug: print(f"respond({submission_data},\n{submission},\n{data})")
+    def var_name_to_default(self):
+        self.internal_name = self.default_var_name()
+
+    def default_var_name(self, m: int = None):
+        if m is None:
+            m = self.number
+
+        gen_name = None
+        if self.prefix is not None:
+            cleaned = ""
+            if self.prefix is not None:
+                for c in self.prefix:
+                    if c.isalnum() or c in ["_", "-"]:
+                        cleaned += c
+            if len(cleaned) > 0:
+                gen_name = f"q{cleaned}"
+        if gen_name is None:
+            gen_name = f"g{m}"
+        return gen_name
+
+    def var_name(self, m: int = None):
+        if self.internal_name is None or \
+                len(self.internal_name) == 0 or \
+                self.internal_name == QuestionGroup._default_var_flag:
+            self.internal_name = self.default_var_name(m)
+
+        return self.internal_name
+
+    def r_validate(self, submission_data: dict, submission: 'Submission', data: dict) -> bool:
+        if print_debug: print(f"{self.__class__.__name__}.r_validate( ... ) for {self}")
 
         if "questions" not in data.keys():
-            raise KeyError("questions")
-
-        questions = self.questions.order_by('number').all()
+            raise KeyError(f"Key 'questions' for {self} not present")
 
         errors = []
-        errored_q = []
+        errors_n = []
+        errors_q = []
 
         n = 0
 
         for q in data["questions"]:
+            n += 1
+            if q is None or not isinstance(q, dict):
+                raise TypeError(f"Entry #{n}: {q} in data for {self} is not the correct type. {type(q) if q is not None else None}")
+
             q: dict
 
-            if print_debug: print(f"\trespond q: {q}")
+            if print_debug: print(f"\tr_validate-#{n} q: {q}")
 
-            pvalue = q["response"]
+            response = q["response"]
 
-            if print_debug: print(f"\trespond value: {pvalue}")
+            if print_debug: print(f"\tr_validate-#{n} value: {response}")
 
             try:
-                value = self.data().force_value_type(pvalue, translate=True)
+                value = self.data().force_value_type(response, translate=True)
                 self.data().validate_value(value)
 
-                if print_debug: print(f"\trespond value: valid")
+                if print_debug: print(f"\tr_validate-#{n} value: valid")
 
-                question: Question = None
-                bad_id = None
+                q[QuestionGroup._validated_response_key] = value
 
+            except ValidationError as e:
+                errors.append(e)
+                errors_n.append(n)
+                errors_q.append(q)
+                continue
+
+        if len(errors) > 0:
+            thrown = ValidationError(errors)
+            thrown.rev_error_list = errors
+            thrown.rev_error_nums = errors_n
+            thrown.rev_error_questions = errors_q
+            raise thrown
+
+        if print_debug: print(f"/r_validate")
+        return True
+
+    def respond(self, submission_data: dict, submission: 'Submission', data: dict, values: dict=None, m: int = None):
+        # print(f"respond({submission_data},\n{submission},\n{data})")
+        if print_debug: print(f"{self.__class__.__name__}.respond( ... ) for {self}")
+
+        if m is None:
+            m = self.number
+
+        group_values = None
+
+        if values is not None:
+            if 'responses' in values.keys():
+                r: dict = values['responses']
+                group_values = {}
+                r[self.var_name(m)] = group_values
+
+        if "questions" not in data.keys():
+            raise KeyError(f"Key 'questions' for {self} not present")
+
+        questions = self.questions.order_by('number').all()
+
+        errors = []
+        errors_n = []
+        errors_q = []
+
+        n = 0
+
+        n_max = len(data["questions"])
+
+        for q in data["questions"]:
+            n += 1
+            if q is None or not isinstance(q, dict):
+                raise TypeError(f"Entry #{n}: {q} in data for {self} is not the correct type. {type(q) if q is not None else None}")
+
+            q: dict
+
+            if print_debug: print(f"\trespond-#{n} q: {q}")
+
+            response = q["response"]
+
+            if print_debug: print(f"\trespond-#{n} value: {response}")
+
+            value = None
+
+            if QuestionGroup._validated_response_key in q.keys():
+                value = q[QuestionGroup._validated_response_key]
+            else:
+                try:
+                    value = self.data().force_value_type(response, translate=True)
+                    self.data().validate_value(value)
+
+                except ValidationError as e:
+                    errors.append(e)
+                    errors_n.append(n)
+                    errors_q.append(n)
+                    continue
+
+            if print_debug: print(f"\trespond-#{n} value: valid")
+
+            question: Question = None
+            bad_id = None
+
+            try:
                 if "id" in q.keys():
                     question = questions.get(id=q["id"])
 
@@ -965,16 +1171,21 @@ class QuestionGroup(FormElement):
 
                 if print_debug: print(f"\trespond question: {question}")
 
-                question.respond(submission, value, translation)
+                question.respond(submission, value, values, group_values, m, n_max)
 
-            except (ValidationError, LookupError) as e:
+                if print_debug: print(f"\tresponded question: {question}")
+
+            except Exception as e:
                 errors.append(e)
-                errored_q.append(q)
-
-            n += 1
+                errors_n.append(n)
+                errors_q.append(q)
 
         if len(errors) > 0:
-            raise ValidationError(errors)
+            thrown = ValidationError(errors)
+            thrown.rev_error_list = errors
+            thrown.rev_error_nums = errors_n
+            thrown.rev_error_questions = errors_q
+            raise thrown
 
         if print_debug: print(f"/respond")
 
@@ -982,6 +1193,7 @@ class QuestionGroup(FormElement):
 class Question(Displayable):
     _name = 'Question'  # internal name
     _parent = 'Displayable'  # internal name
+    _default_var_flag = '__to_default'
 
     prefix = models.CharField(max_length=10, blank=True)
 
@@ -1001,7 +1213,7 @@ class Question(Displayable):
     screen_reader_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='questions_sr',
                                            help_text="The help text of this question.")
 
-    internal_name = models.CharField(max_length=10, blank=True)
+    internal_name = models.CharField(max_length=10, blank=False, default=_default_var_flag)
 
     # Used for units, format hints, etc.
     annotations = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
@@ -1022,12 +1234,17 @@ class Question(Displayable):
     ModelHelper.register(_name, 'screen_reader_text', 73, foreign=Text)
     ModelHelper.register(_name, 'annotations', 70)
     ModelHelper.register(_name, 'internal_name', 69)
-    ModelHelper.register(_name, 'optional', 65, )
+    ModelHelper.register(_name, 'optional', 65)
 
-    def var_name(self):
-        if self.internal_name is not None and len(self.internal_name) > 0:
-            return self.internal_name
-        elif self.prefix is not None or self.group.prefix is not None:
+    def var_name_to_default(self):
+        self.internal_name = self.default_var_name()
+
+    def default_var_name(self, m: int = None, n_max: int = -1):
+        if m is None:
+            m = self.group.number
+
+        gen_name = None
+        if self.prefix is not None or self.group.prefix is not None:
             cleaned = ""
             if self.group.prefix is not None:
                 for c in self.group.prefix:
@@ -1040,14 +1257,49 @@ class Question(Displayable):
                     if c.isalnum() or c in ["_", "-"]:
                         cleaned += c
             if len(cleaned) > 0:
-                return f"q{cleaned}"
-        return f"q{self.group.number}_{self.number}"
+                gen_name = f"q{cleaned}"
+        if gen_name is None:
+            if n_max == 1:
+                gen_name = f"q{m}"
+            else:
+                gen_name = f"q{m}_{self.number}"
+        return gen_name
 
-    def respond(self, submission: 'Submission', value, translation: dict=None):
-        self.group.response_class().objects.create(submission=submission, question=self, value=value)
+    def var_name(self, m: int = None, n_max: int = -1):
+        if self.internal_name is None or \
+                len(self.internal_name) == 0 or \
+                self.internal_name == Question._default_var_flag:
+            self.internal_name = self.default_var_name(m, n_max)
 
-        if translation is not None:
-            translation[self.var_name()] = value
+        return self.internal_name
+
+    def respond(self, submission: 'Submission', value, values: dict=None, group_values: dict=None, m: int = None, n_max = -1):
+        if m is None:
+            m = self.group.number
+
+        try:
+            self.group.response_class().objects.create(submission=submission, question=self, value=value)
+        except Exception as e:
+            thrown = AttributeError(f"Unable to respond to question {self} from {submission} using {value} due to {e}")
+            thrown.__cause__ = e
+            raise thrown
+
+        var_name = "var_name_unset"
+        try:
+            var_name = self.var_name(m, n_max)
+            if values is not None:
+                if 'responses' in values.keys():
+                    r: dict = values['responses']
+                    if 'all' in r.keys():
+                        r['all'][var_name] = value
+                values[var_name] = value
+
+            if group_values is not None:
+                group_values[var_name] = value
+        except Exception as e:
+            thrown = RuntimeError(f"Unable to add variable for {self} from {submission}, {var_name} to values dictionary with value {value} due to {e}")
+            thrown.__cause__ = e
+            raise thrown
 
 
 class QuestionType(ModelBase):
@@ -1230,34 +1482,42 @@ class IntRangeQuestion(FiniteChoiceQuestion):
     ModelHelper.register(_name, 'max', 75, to_filter=True)
     ModelHelper.register(_name, 'step', 75, to_filter=True)
 
-    def force_value_type(self, value, translate=False):
+    def force_value_type(self, value, translate=False) -> int:
         data = value
         if not isinstance(value, int):
             if print_debug: print(f"{self._name}.force_value_type({value} {type(value)}, {translate})")
-            data = int(value)
+            data = int(value) # TODO catch
         if translate:
             data = self.min + (data - 1) * self.step
         return data
 
-    def validate_value(self, data: int):
+    def validate_value(self, data: int) -> bool:
         if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
+
+        value = data
+
         if not isinstance(data, int):
             try:
                 value = int(data)
                 if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int so {data} -> {value} {type(value)}")
             except ValueError as e:
                 if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int -> ValueError {e}")
-                raise ValidationError(_("Expected int, received %(value) %(value_error)") % {"value": value, "value_error": e.__str__()})
-        else:
-            value = data
+                text = _('Expected integer, received %(value)d causing %(value_error)s') % {"value": value, "value_error": e.__str__()}
+                thrown = ValidationError(text)
+                thrown.__cause__ = e
+                raise thrown
+
         if not (self.min <= value <= self.max):
             if print_debug: print(f"{self._name}.validate_value: {self.min} >< {data} >< {self.max} -> out of range")
-            raise ValidationError(_("Value %(value) is out of range: %(min) - %(max)")
-                                  % {"value": value, "min": self.min, "max": self.max})
+            text = _('Value %(value)d is out of range: %(min)d - %(max)d') % {"value": value, "min": self.min, "max": self.max}
+            thrown = ValidationError(text)
+            raise thrown
         elif not (self.step == 1 or (value - self.min % self.step) == 0):
             if print_debug: print(f"{self._name}.validate_value: {data} - {self.min} % {self.step} =/= 0 -> impossible value")
-            raise ValidationError(_("Value %(value) is not allowed with step size %(step)")
-                                  % {"value": value, "step": self.step})
+            text = _('Value %(value)d is not allowed because step size is %(step)d') % {"value": value, "step": self.step}
+            thrown = ValidationError(text)
+            raise thrown
+        return True
 
 
 class BooleanChoiceQuestion(FiniteChoiceQuestion):
@@ -1280,7 +1540,7 @@ class BooleanChoiceQuestion(FiniteChoiceQuestion):
     ModelHelper.register(_name, 'group', 85, to_serialize=False, foreign=QuestionGroup)
     ModelHelper.register(_name, 'labels', 70, text_type='JSON', foreign=StringGroup)
 
-    def force_value_type(self, value, translate=False):
+    def force_value_type(self, value, translate=False) -> bool:
         if translate:
             if not isinstance(value, int):
                 if print_debug: print(f"{self._name}.force_value_type({value} {type(value)}, {translate})")
@@ -1295,7 +1555,12 @@ class BooleanChoiceQuestion(FiniteChoiceQuestion):
     def validate_value(self, data: bool) -> bool:
         if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
         value = data
-        return isinstance(value, bool)
+
+        if not isinstance(value, bool):
+            text = _('Value %(value)s is not a boolean value.') % {'value': f"{value}"}
+            thrown = ValidationError(text)
+            raise thrown
+        return True
 
     def default_labels(self):
         return self._default_labels
@@ -1320,7 +1585,7 @@ class ExclusiveChoiceQuestion(FiniteChoiceQuestion):
     ModelHelper.register(_name, 'group', 85, to_serialize=False, foreign=QuestionGroup)
     ModelHelper.register(_name, 'labels', 70, text_type='JSON', foreign=StringGroup)
 
-    def force_value_type(self, value, translate=False):
+    def force_value_type(self, value, translate=False) -> int:
         if not isinstance(value, int):
             if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
             return int(value)
@@ -1328,8 +1593,25 @@ class ExclusiveChoiceQuestion(FiniteChoiceQuestion):
 
     def validate_value(self, data: int) -> bool:
         if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
+
         value = data
-        return 0 <= value <= self.num_possibilities
+
+        if not isinstance(data, int):
+            try:
+                value = int(data)
+                if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int so {data} -> {value} {type(value)}")
+            except ValueError as e:
+                if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int -> ValueError {e}")
+                text = _('Expected integer, received %(value)s causing %(value_error)s') % {"value": f"{value}", "value_error": e.__str__()}
+                thrown = ValidationError(text)
+                thrown.__cause__ = e
+                raise thrown
+
+        if not (0 < value <= self.num_possibilities):
+            if print_debug: print(f"{self._name}.validate_value: 0 >< {data} >< {self.num_possibilities} -> out of range")
+            text = _('Value %(value)d is out of range: 1 - %(num_possibilities)d') % {"value": value, "num_possibilities": self.num_possibilities}
+            raise ValidationError(text)
+        return True
 
 
 class MultiChoiceQuestion(FiniteChoiceQuestion):
@@ -1406,12 +1688,13 @@ class ContinuousChoiceQuestion(QuestionType):
             try:
                 value = float(data)
             except ValueError:
-                raise ValidationError(_("Expected float, received %(value)") % {"value": value})
+                text = _('Expected float, received %(value)s') % {"value": f"{value}"}
+                raise ValidationError(text)
         else:
             value = data
         if not (self.min <= data <= self.max):
-            raise ValidationError(_("Value %(value) is out of range: %(min) - %(max)")
-                                  % {"value": value, "min": self.min, "max": self.max})
+            text = _('Value %(value)f is out of range: %(min)f - %(max)f') % {"value": value, "min": self.min, "max": self.max}
+            raise ValidationError(text)
 
 
 class FloatRangeQuestion(ContinuousChoiceQuestion):
@@ -1450,12 +1733,13 @@ class FloatRangeQuestion(ContinuousChoiceQuestion):
             try:
                 value = float(data)
             except ValueError:
-                raise ValidationError(_("Expected float, received %(value)") % {"value": value})
+                text = _('Expected float, received %(value)s') % {"value": f"{value}"}
+                raise ValidationError(text)
         else:
             value = data
         if not (self.min <= data <= self.max):
-            raise ValidationError(_("Value %(value) is out of range: %(min) - %(max)")
-                                  % {"value": value, "min": self.min, "max": self.max})
+            text = _('Value %(value)f is out of range: %(min)f - %(max)f') % {"value": value, "min": self.min, "max": self.max}
+            raise ValidationError(text)
 
 
 class Submission(ModelBase):
@@ -1496,10 +1780,20 @@ class Submission(ModelBase):
     ModelHelper.register(_name, 'parsed', 10, False, to_serialize=False, to_search=True)
     ModelHelper.register(_name, 'processed', 10, False, to_serialize=False, to_search=True)
 
-    def validate(self):
-        return json.loads(self.raw_data)
-        # TODO
-        pass
+    def validate(self, data=None):
+        if data is None:
+            try:
+                data = json.loads(self.raw_data)
+            except Exception as e:
+                thrown = ValidationError(f"Unable to parse submission data as JSON.")
+                thrown.__cause__ = e
+                raise thrown
+
+        self.form.r_validate(data, self)
+
+        self.validated = True
+
+        return data
 
     def process(self, data=None):
         if print_debug: print(f"process({data})")
@@ -1510,6 +1804,11 @@ class Submission(ModelBase):
             if print_debug: print(f"\tprocess 1")
 
             output = self.form.respond(data, self)
+
+            if print_test_data:
+                print(f"Test data for {self.form.tag}:")
+                print(output)
+                print("\n")
 
             if print_debug: print(f"\tprocess form responded")
 
@@ -1550,18 +1849,18 @@ class ResponseType(ModelBase):
         if self.question.group.optional and self.left_blank:
             return True
         elif self.left_blank:
-            raise ValidationError(_("Question not answered."))
+            raise ValidationError(_('Question not answered.'))
         elif self.DATA_TAG not in data.keys():
-            raise ValueError(_("No value provided."))
+            raise ValueError(_('No value provided.'))
         return self.validate_value(data[self.DATA_TAG])
 
     def validate_data_return(self, data: dict):
         if self.question.group.optional and self.left_blank:
             return None
         elif self.left_blank:
-            raise ValidationError(_("Question not answered."))
+            raise ValidationError(_('Question not answered.'))
         elif self.DATA_TAG not in data.keys():
-            raise ValueError(_("No value provided."))
+            raise ValueError(_('No value provided.'))
         return self.validate_value_return(data[self.DATA_TAG])
 
     # Delegated
@@ -1573,7 +1872,7 @@ class ResponseType(ModelBase):
 
     def parse_response(self, response: dict, optional=False) -> int:
         if not optional and self.DATA_TAG not in response.keys():
-            raise ValueError(_("No data value(s) present."))
+            raise ValueError(_('No data value(s) present.'))
 
         value = int(response[self.DATA_TAG])
         if not self.validate(value):

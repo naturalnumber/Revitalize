@@ -908,12 +908,14 @@ def _qnd(q: dict, tag: str, n: int, m: int):
             "help_text"  : _t(_k(q, "help_text", None)),
             "number"     : m,
             "prefix"     : _k(q, "number", ""),
-            "annotations": _a(q),
-            "internal_name": _k(q, "internal_name", f"q{n}_{m}"),
+            "annotations": _a(q)
     }
 
     op = _k(q, "optional", None)
     if op is not None: temp["optional"] = op
+
+    internal = _k(q, "internal_name", None)
+    if internal is not None: temp["internal_name"] = internal
 
     return temp
 

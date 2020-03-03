@@ -2,6 +2,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.utils.translation import gettext as _
 
 from Revitalize.serializers import *
 from django.utils import timezone
@@ -27,6 +28,39 @@ def _ok(m: str):
 
 def _bad(m: str):
     return Response(_m(m), status.HTTP_400_BAD_REQUEST)
+
+
+def _ex(e: BaseException, data: dict):
+    if e is None or data is None:
+        return
+
+    data['exception'] = e.__str__()
+    data['type'] = e.__class__.__name__
+
+    #if hasattr(e, '__traceback__') and e.__traceback__ is not None:
+    #    data['trace'] = e.__traceback__.
+
+    if hasattr(e, '__cause__') and e.__cause__ is not None:
+        data['cause'] = e.__cause__.__str__()
+
+    if hasattr(e, 'detail'):
+        data['detail'] = e.detail
+
+
+def _ex_rc(e: BaseException, data: dict):
+    _ex(e, data)
+
+    cause = e.__cause__
+    parent = data
+    while cause is not None:
+        c_data = {}
+
+        _ex(cause, c_data)
+
+        parent['cause_data'] = c_data
+
+        cause = cause.__cause__
+        parent = c_data
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -142,8 +176,6 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
                 raw_data = submission_data
                 if print_debug or print_debug2: print(f"? -> raw_data = {raw_data}")
 
-
-
             submission = Submission.objects.create(user=user, form=form, time=time, raw_data=raw_data)
             if print_debug: print(submission)
 
@@ -153,7 +185,47 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
                 if print_debug or print_debug2: print('check 3')
             except ValidationError as e:
                 if print_debug or print_debug2: print(f"Validation: {e}")
-                return Response(_m(f"Could not validate submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
+
+                try:
+                    if hasattr(e, 'rev_error_list') and hasattr(e, 'rev_error_nums') and hasattr(e, 'rev_error_elements'):
+                        errors = []
+
+                        for error, n, group in zip(e.rev_error_list, e.rev_error_nums, e.rev_error_elements):
+                            e_data = {
+                                    'element_number' : n,
+                                    'group_data' : group
+                                           }
+
+                            _ex_rc(error, e_data)
+
+                            if hasattr(error, 'rev_error_list') and \
+                                    hasattr(error, 'rev_error_nums') and \
+                                    hasattr(error, 'rev_error_questions'):
+                                q_errors = []
+                                for q_error, q_n, question in zip(error.rev_error_list, error.rev_error_nums, error.rev_error_questions):
+                                    qe_data = {
+                                            'element_number' : q_n,
+                                            'question_data' : question
+                                                   }
+
+                                    _ex_rc(q_error, qe_data)
+
+                                    q_errors.append(qe_data)
+
+                                if len(q_errors) > 0: e_data['questions'] = q_errors
+
+                            errors.append(e_data)
+
+                        response = {
+                                'message' : _("Submission could not be validated."),
+                                'errors' : errors
+                                    }
+                        return Response(response, status=status.HTTP_400_BAD_REQUEST)
+                except Exception as ex:
+                    # print(ex)
+                    pass
+
+                return _r(f"Could not validate submission ({e})", status.HTTP_400_BAD_REQUEST)
 
             serializer = SubmissionSerializer(submission, many=False)
 
@@ -165,7 +237,7 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
             return to_send
         except Exception as e:
             if print_debug or print_debug2: print(e)
-            return Response(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
+            return _r(f"Could not parse submission ({e})", status.HTTP_400_BAD_REQUEST)
 
 
 class MedicalLabViewSet(viewsets.ModelViewSet):
