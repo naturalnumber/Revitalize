@@ -204,7 +204,7 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
                                 q_errors = []
                                 for q_error, q_n, question in zip(error.rev_error_list, error.rev_error_nums, error.rev_error_questions):
                                     qe_data = {
-                                            'element_number' : q_n,
+                                            'question_number' : q_n,
                                             'question_data' : question
                                                    }
 
