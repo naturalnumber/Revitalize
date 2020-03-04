@@ -7,13 +7,13 @@ router = routers.DefaultRouter()
 
 # TODO: are these showing the proper urls when doing '/api/'
 
-router.register('text', TextViewSet)
-router.register('strings', StringViewSet)
-router.register('string_groups', StringGroupViewSet)
+# router.register('text', TextViewSet)
+# router.register('strings', StringViewSet)
+# router.register('string_groups', StringGroupViewSet)
 router.register('forms', FormViewSet)
-router.register('surveys', SurveyViewSetFrontEnd)
-router.register('medical_labs', MedicalLabViewSetFrontEnd)
-router.register('available_surveys', AvailableSurveyViewSet)
+router.register('surveys', SurveyViewSetFrontEnd, basename='survey')
+router.register('medical_labs', MedicalLabViewSetFrontEnd, basename='medical_lab')
+router.register('available_surveys', AvailableSurveyViewSet, basename='available_survey')
 router.register('user_survey_history', UserSurveyHistoryViewSet)
 router.register('profile_retrieval', ProfileRetrievalViewSet, basename='profile_retrieval')
 #router.register('profile', ProfileRetrievalViewSet.as_view({'get' : 'retrieve'}), basename='profile')
@@ -38,10 +38,10 @@ router.register('data_points_int', IntDataPointViewSet)
 router.register('data_points_float', FloatDataPointViewSet)
 
 # For debugging
-router.register('surveys_d', SurveyViewSetAll)
-router.register('surveys_0', SurveyViewSet)
-router.register('medical_labs_0', MedicalLabViewSet)
-router.register('profilse_0', ProfileViewSet)
+# router.register('surveys_d', SurveyViewSetAll)
+# router.register('surveys_0', SurveyViewSet)
+# router.register('medical_labs_0', MedicalLabViewSet)
+# router.register('profilse_0', ProfileViewSet)
 
 
 urlpatterns = [

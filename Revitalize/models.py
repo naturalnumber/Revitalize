@@ -334,7 +334,10 @@ class Profile(ModelBase):
                                         verbose_name="Alternate Phone Number")
     email = models.EmailField(blank=False, help_text="The contact email address.")
 
-    # Abstract into an address object?
+    # Abstract into an address object
+    address = models.OneToOneField(Address, on_delete=models.CASCADE, verbose_name="Home Address")
+
+    # Legacy
     street_address = models.CharField(max_length=200, blank=False)
     city = models.CharField(max_length=100, blank=False)
     province = models.CharField(max_length=50, blank=False)

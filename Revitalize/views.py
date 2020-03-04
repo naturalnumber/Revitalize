@@ -125,8 +125,11 @@ class SurveyViewSet(viewsets.ModelViewSet):
 class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
     _model = Form
     serializer_class = FormSerializerDisplay
-    queryset = _model.objects.filter(type=Form.FormType.SURVEY.value).all()
+    queryset = _model.objects.filter(type=Form.FormType.SURVEY.value)
     permission_classes = (IsAuthenticated,)
+
+    # def get_queryset(self):
+    #     return Form.objects.filter(type=Form.FormType.SURVEY.value)
 
     @action(detail=True, methods=['POST'])
     def submit(self, request, pk=None):
@@ -249,7 +252,7 @@ class MedicalLabViewSet(viewsets.ModelViewSet):
 class MedicalLabViewSetFrontEnd(viewsets.ModelViewSet):
     _model = Form
     serializer_class = FormSerializerDisplay
-    queryset = _model.objects.filter(type=Form.FormType.MEDICAL_LAB.value).all()
+    queryset = _model.objects.filter(type=Form.FormType.MEDICAL_LAB.value)
 
 
 class TextElementViewSet(viewsets.ModelViewSet):
