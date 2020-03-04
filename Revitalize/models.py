@@ -34,7 +34,7 @@ def pre_validate_json(j: str):
 
 
 def _webify_text(s: str):
-    return s.replace("'", "&apos;") if s is not None else None  # html: &apos; Unicode: U+0027
+    return s.replace("'", "U+0027") if s is not None else None  # html: &apos; Unicode: U+0027
 
 
 class LangCode(models.TextChoices):
