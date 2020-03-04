@@ -669,7 +669,15 @@ phq9 = {
                                 }
                         ]
                 }
-        ]
+        ],
+        "analysis": {
+                "outputs": [
+                        {
+                                "type": "Indicator",
+                                "calculation": "q1 + q2 + q3 + q4 + q5 + q6 + q7 + q8 + q9"
+                        }
+                ]
+        }
 }
 
 
@@ -755,7 +763,15 @@ gad7 = {
                                 }
                         ]
                 }
-        ]
+        ],
+        "analysis": {
+                "outputs": [
+                        {
+                                "type": "Indicator",
+                                "calculation": "q1 + q2 + q3 + q4 + q5 + q6 + q7"
+                        }
+                ]
+        }
 }
 
 survey_list = [semcd6, rand36, phq9, gad7]
@@ -995,9 +1011,21 @@ empty_string = _s("")
 empty_text = _t("")
 empty_string_group = _g("{}")
 
-ind = Revitalize.models.Indicator.objects.create(name=_s("semcd6"),
+ind = Revitalize.models.Indicator.objects.create(name=_s("SEMCD6 Score"),
                                                  type=Revitalize.models.Indicator.DataType.FLOAT.value)
 semcd6["analysis"]['outputs'][0]["id"] = ind.id
+
+loaded = [load_survey(s) for s in survey_list]
+
+ind = Revitalize.models.Indicator.objects.create(name=_s("PHQ9 Score"),
+                                                 type=Revitalize.models.Indicator.DataType.INT.value)
+phq9["analysis"]['outputs'][0]["id"] = ind.id
+
+loaded = [load_survey(s) for s in survey_list]
+
+ind = Revitalize.models.Indicator.objects.create(name=_s("GAD7 Score"),
+                                                 type=Revitalize.models.Indicator.DataType.INT.value)
+gad7["analysis"]['outputs'][0]["id"] = ind.id
 
 loaded = [load_survey(s) for s in survey_list]
 
