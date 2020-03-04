@@ -1015,13 +1015,9 @@ ind = Revitalize.models.Indicator.objects.create(name=_s("SEMCD6 Score"),
                                                  type=Revitalize.models.Indicator.DataType.FLOAT.value)
 semcd6["analysis"]['outputs'][0]["id"] = ind.id
 
-loaded = [load_survey(s) for s in survey_list]
-
 ind = Revitalize.models.Indicator.objects.create(name=_s("PHQ9 Score"),
                                                  type=Revitalize.models.Indicator.DataType.INT.value)
 phq9["analysis"]['outputs'][0]["id"] = ind.id
-
-loaded = [load_survey(s) for s in survey_list]
 
 ind = Revitalize.models.Indicator.objects.create(name=_s("GAD7 Score"),
                                                  type=Revitalize.models.Indicator.DataType.INT.value)
