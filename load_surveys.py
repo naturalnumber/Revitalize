@@ -362,7 +362,7 @@ rand36 = {
                                 },
                                 {
                                         "number"   : "19",
-                                        "text"     : "Didn’t do work or other activities as <b>carefully</b> as usual",
+                                        "text"     : "Didn't do work or other activities as <b>carefully</b> as usual",
                                         "help_text": None
                                 }
                         ]
@@ -543,7 +543,7 @@ rand36 = {
                                 "labels"     : [
                                         "Definitely True",
                                         "Mostly True",
-                                        "Don’t Know",
+                                        "Don't Know",
                                         "Mostly False",
                                         "Definitely False"
                                 ],

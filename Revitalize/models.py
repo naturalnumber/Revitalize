@@ -32,11 +32,6 @@ def pre_validate_json(j: str):
     except JSONDecodeError as e:
         raise ValidationError(e)
 
-
-def _webify_text(s: str):
-    return s.replace("'", "U+0027") if s is not None else None  # html: &apos; Unicode: U+0027
-
-
 class LangCode(models.TextChoices):
     UNKNOWN = '?', _('Unknown')
     ENGLISH = 'EN', _('English')
@@ -51,7 +46,7 @@ def _str(entry, lang=LangCode.ENGLISH.value, default=None):
     elif lang == LangCode.FRENCH.value:
         # TODO
         pass
-    return _webify_text(s)
+    return s
 
 
 # This class is just a helper for dealing with some Django features quickly during development
