@@ -12,7 +12,7 @@ from Revitalize.data_analysis_system import DataAnalysisSystem
 #def _(s): # TODO
 #    return s
 
-print_debug = False
+print_debug = True
 
 print_debug_a = False
 
@@ -330,7 +330,7 @@ class Profile(ModelBase):
     email = models.EmailField(blank=False, help_text="The contact email address.")
 
     # Abstract into an address object
-    address = models.OneToOneField(Address, on_delete=models.CASCADE, verbose_name="Home Address")
+    #address = models.OneToOneField(Address, on_delete=models.CASCADE, verbose_name="Home Address")
 
     # Legacy
     street_address = models.CharField(max_length=200, blank=False)
