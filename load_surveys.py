@@ -639,7 +639,7 @@ phq9 = {
                                 },
                                 {
                                         "number"   : "8",
-                                        "text"     : "Moving or speaking so slowly that other people could have noticed? Or the opposite – being so fidgety or restless that you have been moving around a lot more than usual",
+                                        "text"     : "Moving or speaking so slowly that other people could have noticed? Or the opposite - being so fidgety or restless that you have been moving around a lot more than usual",
                                         "help_text": None
                                 },
                                 {
