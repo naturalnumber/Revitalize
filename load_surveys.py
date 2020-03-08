@@ -629,7 +629,7 @@ phq9 = {
                                 },
                                 {
                                         "number"   : "6",
-                                        "text"     : "Feeling bad about yourself – or that you are a failure or have let yourself or your family down",
+                                        "text"     : "Feeling bad about yourself - or that you are a failure or have let yourself or your family down",
                                         "help_text": None
                                 },
                                 {
