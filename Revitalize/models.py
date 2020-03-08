@@ -12,7 +12,7 @@ from Revitalize.data_analysis_system import DataAnalysisSystem
 #def _(s): # TODO
 #    return s
 
-print_debug = True
+print_debug = False
 
 print_debug_a = False
 
@@ -408,7 +408,7 @@ class Profile(ModelBase):
         return Submission.objects.filter(user=self.user)
 
     def all_completed_surveys(self):
-        return Submission.objects.filter(user=self.user)
+        return Submission.objects.filter(user=self.user, form__type=Form.FormType.SURVEY.value)
 
     def submitted_forms(self, id):
         return Submission.objects.filter(user=self.user, form__id=id)
@@ -716,7 +716,7 @@ class Form(Displayable):
 
                 try:
                     group.r_validate(data, submission, e)
-                except ValidationError as er:
+                except (ValidationError, KeyError, LookupError) as er:
                     errors.append(er)
                     errors_n.append(n)
                     errors_e.append(e)
@@ -1048,6 +1048,8 @@ class QuestionGroup(FormElement):
         if "questions" not in data.keys():
             raise KeyError(f"Key 'questions' for {self} not present")
 
+        questions = self.questions.order_by('number').all()
+
         errors = []
         errors_n = []
         errors_q = []
@@ -1062,6 +1064,46 @@ class QuestionGroup(FormElement):
             q: dict
 
             if print_debug: print(f"\tr_validate-#{n} q: {q}")
+
+            question: Question = None
+            bad_id = None
+
+            try:
+                if "id" in q.keys():
+                    question = questions.get(id=q["id"])
+
+                    if question is None:
+                        bad_id = q["id"]
+
+                if question is None:
+                    question = questions[n]
+
+                if question is None:
+                    if bad_id is not None:
+                        text = _('Unable to find question #%(n)d with id %(bad_id)d') % {"n": n, "bad_id": bad_id}
+                        thrown = LookupError(text)
+                        thrown.detail = text
+                        raise thrown
+                    text = _('Unable to find question #%(n)d') % {"n": n}
+                    thrown = LookupError(text)
+                    thrown.detail = text
+                    raise thrown
+            except LookupError as e:
+                errors.append(e)
+                errors_n.append(n)
+                errors_q.append(q)
+                continue
+
+            if "response" not in q.keys():
+                if question.optional:
+                    continue #TODO
+                text = _('Key "response" for question #%(n)d not present') % {"n": n, "bad_id": bad_id}
+                thrown = KeyError(text)
+                thrown.detail = text
+                errors.append(thrown)
+                errors_n.append(n)
+                errors_q.append(q)
+                continue
 
             response = q["response"]
 
@@ -1128,6 +1170,37 @@ class QuestionGroup(FormElement):
 
             if print_debug: print(f"\trespond-#{n} q: {q}")
 
+            question: Question = None
+            bad_id = None
+
+            try:
+                if "id" in q.keys():
+                    question = questions.get(id=q["id"])
+
+                    if question is None:
+                        bad_id = q["id"]
+
+                if question is None:
+                    question = questions[n]
+
+                if question is None:
+                    if bad_id is not None:
+                        raise LookupError(f"Unable to find question #{n} with id {bad_id}")
+                    raise LookupError(f"Unable to find question #{n}")
+            except LookupError as e:
+                errors.append(e)
+                errors_n.append(n)
+                errors_q.append(q)
+                continue
+
+            if "response" not in q.keys():
+                if question.optional:
+                    continue #TODO
+                errors.append(KeyError(f"Key 'response' for question #{n} not present"))
+                errors_n.append(n)
+                errors_q.append(q)
+                continue
+
             response = q["response"]
 
             if print_debug: print(f"\trespond-#{n} value: {response}")
@@ -1141,7 +1214,7 @@ class QuestionGroup(FormElement):
                     value = self.data().force_value_type(response, translate=True)
                     self.data().validate_value(value)
 
-                except ValidationError as e:
+                except (ValidationError, TypeError, ValueError) as e:
                     errors.append(e)
                     errors_n.append(n)
                     errors_q.append(n)
@@ -1484,7 +1557,14 @@ class IntRangeQuestion(FiniteChoiceQuestion):
         data = value
         if not isinstance(value, int):
             if print_debug: print(f"{self._name}.force_value_type({value} {type(value)}, {translate})")
-            data = int(value) # TODO catch
+            try:
+                data = int(value)
+            except TypeError as e:
+                text = _('Expected integer, received %(value)d causing %(type_error)s') % {"value": value, "type_error": e.__str__()}
+                thrown = ValidationError(text)
+                thrown.__cause__ = e
+                raise thrown
+
         if translate:
             data = self.min + (data - 1) * self.step
         return data

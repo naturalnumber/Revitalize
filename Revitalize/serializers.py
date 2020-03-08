@@ -722,48 +722,6 @@ class FormSerializerDisplay(serializers.ModelSerializer):
         #return "test" # serialized
 
 
-class FormSerializerDisplay2(serializers.ModelSerializer):
-    name = StringSerializer(many=False)
-    description = TextSerializer(many=False)
-    elements = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Form
-        fields = ['id', 'name', 'description', 'type', 'display', 'elements']
-
-    def get_elements(self, f: Form):
-
-        elements = []
-       
-        text_elements = f.text_elements.order_by('number').all()
-       
-        for te in text_elements:
-            print(te)
-            elements.append((te.number, TextElementSerializerDisplay(te, many=False).data))
-            print(f"te-#{te.number} = {TextElementSerializerDisplay(te, many=False).data}")
-       
-        question_groups = f.question_groups.order_by('number').all()
-       
-        for qg in question_groups:
-            print(qg)
-            elements.append((qg.number, QuestionGroupSerializerDisplay(qg, many=False).data))
-            print(f"qg-#{qg.number} = {QuestionGroupSerializerDisplay(qg, many=False).data}")
-
-        elements.sort(key=lambda e: e[0])
-
-        serialized_elements = [e[1] for e in elements]
-
-        serialized = "["
-
-        for s in serialized_elements:
-            serialized += s
-            serialized += ','
-
-        serialized += ']'
-
-        return serialized
-
-
 class SurveySerializerDisplay(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
@@ -811,7 +769,94 @@ class SurveySerializerDisplay(serializers.ModelSerializer):
         return ListSerializer([e[1] for e in elements])
 
 
+class IntDataPointSerializerDisplay(serializers.ModelSerializer):
+    type = serializers.SerializerMethodField()
+    indicator_id = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = IntDataPoint
+        fields = ['id', 'time', 'value', 'type', 'validated', 'processed', 'indicator_id', 'name']
+
+    def get_name(self, p: FloatDataPoint):
+        return _str(p.indicator.name)
+
+    def get_type(self, p: FloatDataPoint):
+        return p.indicator.type
+
+    def get_indicator_id(self, p: FloatDataPoint):
+        return p.indicator_id
+
+
+class FloatDataPointSerializerDisplay(serializers.ModelSerializer):
+    type = serializers.SerializerMethodField()
+    indicator_id = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FloatDataPoint
+        fields = ['id', 'time', 'value', 'type', 'validated', 'processed', 'indicator_id', 'name']
+
+    def get_name(self, p: FloatDataPoint):
+        return _str(p.indicator.name)
+
+    def get_type(self, p: FloatDataPoint):
+        return p.indicator.type
+
+    def get_indicator_id(self, p: FloatDataPoint):
+        return p.indicator_id
+
+
+class DataPointSerializerDisplay(serializers.ModelSerializer):
+    @classmethod
+    def get_serializer(cls, model):
+        if model == IntDataPoint:
+            return IntDataPointSerializerDisplay
+        elif model == FloatDataPoint:
+            return FloatDataPointSerializerDisplay
+
+    def to_representation(self, instance):
+        serializer = self.get_serializer(instance.__class__)
+        return serializer(instance, context=self.context).data
+
 # Endpoint related
+
+
+class UserSurveyHistorySerializer(serializers.ModelSerializer):
+    submission_id = serializers.SerializerMethodField()
+    survey_id = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
+    alt_survey_id = serializers.SerializerMethodField()
+    results = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Submission
+        fields = ['submission_id', 'time', 'validated', 'parsed', 'processed', 'survey_id', 'name', 'description',
+                  'alt_survey_id', 'results', 'submitter']
+
+    def get_name(self, s: Submission):
+        return _str(s.form.name)
+
+    def get_description(self, s: Submission):
+        return _str(s.form.description)
+
+    def get_submission_id(self, s: Submission):
+        return s.id
+
+    def get_survey_id(self, s: Submission):
+        return s.form.id
+
+    def get_alt_survey_id(self, s: Submission):
+        return s.id
+
+    def get_results(self, s: Submission):
+        data_points = chain(s.int_data_points.all(),
+                             s.float_data_points.all())
+
+        ser = DataPointSerializerDisplay(data_points, many=True)
+
+        return ser.data
 
 
 class AvailableSurveySerializer(serializers.ModelSerializer):
@@ -839,12 +884,6 @@ class AvailableSurveySerializer(serializers.ModelSerializer):
         return s.id
 
 
-class UserSurveyHistorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Submission
-        fields = ModelHelper.serialize(model.__name__)
-
-
 class ProfileRetrievalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
@@ -855,3 +894,45 @@ class UserIndicatorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Indicator
         fields = ModelHelper.serialize(model.__name__)
+
+
+# class FormSerializerDisplay2(serializers.ModelSerializer):
+#     name = StringSerializer(many=False)
+#     description = TextSerializer(many=False)
+#     elements = serializers.SerializerMethodField()
+#
+#     class Meta:
+#         model = Form
+#         fields = ['id', 'name', 'description', 'type', 'display', 'elements']
+#
+#     def get_elements(self, f: Form):
+#
+#         elements = []
+#
+#         text_elements = f.text_elements.order_by('number').all()
+#
+#         for te in text_elements:
+#             print(te)
+#             elements.append((te.number, TextElementSerializerDisplay(te, many=False).data))
+#             print(f"te-#{te.number} = {TextElementSerializerDisplay(te, many=False).data}")
+#
+#         question_groups = f.question_groups.order_by('number').all()
+#
+#         for qg in question_groups:
+#             print(qg)
+#             elements.append((qg.number, QuestionGroupSerializerDisplay(qg, many=False).data))
+#             print(f"qg-#{qg.number} = {QuestionGroupSerializerDisplay(qg, many=False).data}")
+#
+#         elements.sort(key=lambda e: e[0])
+#
+#         serialized_elements = [e[1] for e in elements]
+#
+#         serialized = "["
+#
+#         for s in serialized_elements:
+#             serialized += s
+#             serialized += ','
+#
+#         serialized += ']'
+#
+#         return serialized

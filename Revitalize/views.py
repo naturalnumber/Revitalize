@@ -1,3 +1,4 @@
+from django.db.models.query import QuerySet
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -122,127 +123,6 @@ class SurveyViewSet(viewsets.ModelViewSet):
     queryset = _model.objects.all()
 
 
-class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
-    _model = Form
-    serializer_class = FormSerializerDisplay
-    queryset = _model.objects.filter(type=Form.FormType.SURVEY.value)
-    permission_classes = (IsAuthenticated,)
-
-    # def get_queryset(self):
-    #     return Form.objects.filter(type=Form.FormType.SURVEY.value)
-
-    @action(detail=True, methods=['POST'])
-    def submit(self, request, pk=None):
-        if print_debug or print_debug2: print(f"Submission received for form #{pk}")
-        if print_debug: print(request)
-        if print_debug: print(dir(request))
-        if print_debug: print(request.data)
-        #SurveyViewSetFrontEnd.last_request = request
-        try:
-            if 'data' not in dir(request):
-                return _bad("Must provide submission data.")
-            if pk is None:
-                return _bad("No key provided.")
-
-            # Validate
-
-            # Check for replacement
-
-            if print_debug: print("check 1")
-
-            user = request.user  # TODO
-
-            if print_debug: print(user)
-
-            form = Form.objects.get(id=pk)
-            if print_debug: print(form)
-
-            submission_data = request.data
-            if print_debug or print_debug2: print(f"submission_data = {submission_data} \n... {dict(submission_data)}")
-            if print_debug: print(type(submission_data))
-
-            if 'time' in dir(request):
-                time = request.data['time']
-            elif 'time' in submission_data:
-                time = submission_data['time']
-            else:
-                time = timezone.now()
-            if print_debug: print(time)
-
-            if isinstance(submission_data, dict):
-                raw_data = json.dumps(submission_data)
-                if print_debug or print_debug2: print(f"dict -> raw_data = {raw_data}")
-            elif isinstance(submission_data, str):
-                raw_data = submission_data
-                if print_debug or print_debug2: print(f"str -> raw_data = {raw_data}")
-            else:
-                raw_data = submission_data
-                if print_debug or print_debug2: print(f"? -> raw_data = {raw_data}")
-
-            submission = Submission.objects.create(user=user, form=form, time=time, raw_data=raw_data)
-            if print_debug: print(submission)
-
-            try:
-                if print_debug or print_debug2: print('check 2')
-                submission.process(submission.validate())
-                if print_debug or print_debug2: print('check 3')
-            except ValidationError as e:
-                if print_debug or print_debug2: print(f"Validation: {e}")
-
-                try:
-                    if hasattr(e, 'rev_error_list') and hasattr(e, 'rev_error_nums') and hasattr(e, 'rev_error_elements'):
-                        errors = []
-
-                        for error, n, group in zip(e.rev_error_list, e.rev_error_nums, e.rev_error_elements):
-                            e_data = {
-                                    'element_number' : n,
-                                    'group_data' : group
-                                           }
-
-                            _ex_rc(error, e_data)
-
-                            if hasattr(error, 'rev_error_list') and \
-                                    hasattr(error, 'rev_error_nums') and \
-                                    hasattr(error, 'rev_error_questions'):
-                                q_errors = []
-                                for q_error, q_n, question in zip(error.rev_error_list, error.rev_error_nums, error.rev_error_questions):
-                                    qe_data = {
-                                            'question_number' : q_n,
-                                            'question_data' : question
-                                                   }
-
-                                    _ex_rc(q_error, qe_data)
-
-                                    q_errors.append(qe_data)
-
-                                if len(q_errors) > 0: e_data['questions'] = q_errors
-
-                            errors.append(e_data)
-
-                        response = {
-                                'message' : _("Submission could not be validated."),
-                                'errors' : errors
-                                    }
-                        return Response(response, status=status.HTTP_400_BAD_REQUEST)
-                except Exception as ex:
-                    # print(ex)
-                    pass
-
-                return _r(f"Could not validate submission ({e})", status.HTTP_400_BAD_REQUEST)
-
-            serializer = SubmissionSerializer(submission, many=False)
-
-            response = {'message': 'Submission received', 'result': serializer.data}
-
-            if print_debug: print(f"status.HTTP_201_CREATED = {status.HTTP_201_CREATED}")
-            to_send = Response(response, status=status.HTTP_201_CREATED)
-            if print_debug or print_debug2: print(to_send)
-            return to_send
-        except Exception as e:
-            if print_debug or print_debug2: print(e)
-            return _r(f"Could not parse submission ({e})", status.HTTP_400_BAD_REQUEST)
-
-
 class MedicalLabViewSet(viewsets.ModelViewSet):
     _model = MedicalLab
     serializer_class = MedicalLabSerializer
@@ -326,38 +206,38 @@ class SubmissionViewSet(viewsets.ModelViewSet):
     serializer_class = SubmissionSerializer
     queryset = _model.objects.all()
 
-    @action(detail=True, methods=['POST'])
-    def resubmit(self, request, pk=None):  # TODO
-        try:
-            # Validate
-
-            submission = Submission.objects.get(pk=pk)
-
-            #  user = request.user TODO
-            user = User.objects.get(id=1)  # request.user.profile  # TODO
-
-            changed = False
-
-            if 'time' in request.data:
-                time = request.data['time']
-                submission.time = time
-
-            if 'submission_data' in request.data:
-                raw_data = request.data['submission_data']
-                submission.raw_data = raw_data
-
-            if not changed:
-                return _r("No change requested", status.HTTP_204_NO_CONTENT)
-
-            serializer = SubmissionSerializer(submission, many=False)
-
-            response = {'message': 'Update received', 'result': serializer.data}
-
-            # Bad input...
-
-            return Response(response, status=status.HTTP_202_ACCEPTED)
-        except Exception as e:
-            return Response(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
+    # @action(detail=True, methods=['POST'])
+    # def resubmit(self, request, pk=None):  # TODO
+    #     try:
+    #         # Validate
+    #
+    #         submission = Submission.objects.get(pk=pk)
+    #
+    #         #  user = request.user TODO
+    #         user = User.objects.get(id=1)  # request.user.profile  # TODO
+    #
+    #         changed = False
+    #
+    #         if 'time' in request.data:
+    #             time = request.data['time']
+    #             submission.time = time
+    #
+    #         if 'submission_data' in request.data:
+    #             raw_data = request.data['submission_data']
+    #             submission.raw_data = raw_data
+    #
+    #         if not changed:
+    #             return _r("No change requested", status.HTTP_204_NO_CONTENT)
+    #
+    #         serializer = SubmissionSerializer(submission, many=False)
+    #
+    #         response = {'message': 'Update received', 'result': serializer.data}
+    #
+    #         # Bad input...
+    #
+    #         return Response(response, status=status.HTTP_202_ACCEPTED)
+    #     except Exception as e:
+    #         return Response(_m(f"Could not parse submission ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
 
 class TextResponseViewSet(viewsets.ModelViewSet):
@@ -396,14 +276,145 @@ class FloatDataPointViewSet(viewsets.ModelViewSet):
     queryset = _model.objects.all()
 
 
+class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
+    _model = Form
+    serializer_class = FormSerializerDisplay
+    queryset = _model.objects.filter(type=Form.FormType.SURVEY.value)
+    permission_classes = (IsAuthenticated,)
+
+    # def get_queryset(self):
+    #     return Form.objects.filter(type=Form.FormType.SURVEY.value)
+
+    @action(detail=True, methods=['POST'])
+    def submit(self, request, pk=None):
+        if print_debug or print_debug2: print(f"Submission received for form #{pk}")
+        if print_debug: print(request)
+        if print_debug: print(dir(request))
+        if print_debug: print(request.data)
+        #SurveyViewSetFrontEnd.last_request = request
+        try:
+            if 'data' not in dir(request):
+                return _bad("Must provide submission data.")
+            if pk is None:
+                return _bad("No key provided.")
+
+            # Validate
+
+            # Check for replacement
+
+            if print_debug: print("check 1")
+
+            user = request.user  # TODO
+
+            if print_debug: print(user)
+
+            form = Form.objects.get(id=pk)
+            if print_debug: print(form)
+
+            submission_data = request.data
+            if print_debug or print_debug2: print(f"submission_data = {submission_data} \n... {dict(submission_data)}")
+            if print_debug: print(type(submission_data))
+
+            if 'time' in dir(request):
+                time = request.data['time']
+            elif 'time' in submission_data:
+                time = submission_data['time']
+            else:
+                time = timezone.now()
+            if print_debug: print(time)
+
+            if isinstance(submission_data, dict):
+                raw_data = json.dumps(submission_data)
+                if print_debug or print_debug2: print(f"dict -> raw_data = {raw_data}")
+            elif isinstance(submission_data, str):
+                raw_data = submission_data
+                if print_debug or print_debug2: print(f"str -> raw_data = {raw_data}")
+            else:
+                raw_data = submission_data
+                if print_debug or print_debug2: print(f"? -> raw_data = {raw_data}")
+
+            submission = Submission.objects.create(user=user, form=form, time=time, raw_data=raw_data)
+            if print_debug: print(submission)
+
+            try:
+                if print_debug or print_debug2: print('check 2')
+                submission.process(submission.validate())
+                if print_debug or print_debug2: print('check 3')
+            except ValidationError as e:
+                if print_debug or print_debug2: print(f"Validation: {e}")
+
+                try:
+                    if hasattr(e, 'rev_error_list') and hasattr(e, 'rev_error_nums') and hasattr(e, 'rev_error_elements'):
+                        errors = []
+
+                        for error, n, group in zip(e.rev_error_list, e.rev_error_nums, e.rev_error_elements):
+                            e_data = {
+                                    'element_number' : n,
+                                    'group_data' : group
+                                           }
+
+                            _ex_rc(error, e_data)
+
+                            if hasattr(error, 'rev_error_list') and \
+                                    hasattr(error, 'rev_error_nums') and \
+                                    hasattr(error, 'rev_error_questions'):
+                                q_errors = []
+                                for q_error, q_n, question in zip(error.rev_error_list, error.rev_error_nums,
+                                                                  error.rev_error_questions):
+                                    qe_data = {
+                                            'question_number' : q_n,
+                                            'question_data' : question
+                                                   }
+
+                                    _ex_rc(q_error, qe_data)
+
+                                    q_errors.append(qe_data)
+
+                                if len(q_errors) > 0: e_data['questions'] = q_errors
+
+                            errors.append(e_data)
+
+                        response = {
+                                'message' : _("Submission could not be validated."),
+                                'errors' : errors
+                                    }
+                        return Response(response, status=status.HTTP_400_BAD_REQUEST)
+                except Exception as ex:
+                    # print(ex) # TODO
+                    pass
+
+                return _r(f"Could not validate submission ({e})", status.HTTP_400_BAD_REQUEST)
+
+            # acs: 'QuerySet' = user.profile.all_completed_surveys()
+            # for sub in acs:
+            #     print(SubmissionSerializer(sub, many=False).data)
+
+            serializer = SubmissionSerializer(submission, many=False)
+
+            response = {'message': 'Submission received', 'result': serializer.data}
+
+            if print_debug: print(f"status.HTTP_201_CREATED = {status.HTTP_201_CREATED}")
+            to_send = Response(response, status=status.HTTP_201_CREATED)
+            if print_debug or print_debug2: print(to_send)
+            return to_send
+        except Exception as e:
+            if print_debug or print_debug2: print(e)
+            return _r(f"Could not parse submission ({e})", status.HTTP_400_BAD_REQUEST)
+
+
 class AvailableSurveyViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Survey.objects.all()
     serializer_class = AvailableSurveySerializer
 
 
 class UserSurveyHistoryViewSet(viewsets.ModelViewSet):
-    queryset = Submission.objects.all()
+    _model = Submission
     serializer_class = UserSurveyHistorySerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        profile: Profile = self.request.user.profile
+        return profile.all_completed_surveys()
 
 
 class ProfileRetrievalViewSet(viewsets.ModelViewSet):
