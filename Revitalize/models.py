@@ -13,7 +13,7 @@ from Revitalize.data_analysis_system import DataAnalysisSystem
 #def _(s): # TODO
 #    return s
 
-print_debug = False
+print_debug = True
 
 print_debug_a = False
 
@@ -2168,7 +2168,15 @@ class BooleanChoiceQuestion(FiniteChoiceQuestion):
         else:
             data = super()._force_value_type(value)
 
-        return data == 2 if translate else data
+        if translate:
+            if data == 2: return True
+            if data == 1: return False
+
+            thrown = ValidationError(f"Expected 1 or 2 in {self}, received {value} <{type(value)}>")
+            thrown.user_message = _('Entered value is not as expected. The question expected 1 or 2.')
+            thrown.bad_value = type(value).__name__
+            raise thrown
+        return data
 
     #  This is not very useful but is required to fit the expected interface
     def validate_value(self, data: bool) -> bool:
