@@ -338,7 +338,7 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
 
             try:
                 if print_debug or print_debug2: print('check 2')
-                submission.process(submission.validate())
+                submission.process(submission.r_validate())
                 if print_debug or print_debug2: print('check 3')
             except ValidationError as e:
                 if print_debug or print_debug2: print(f"Validation: {e}")

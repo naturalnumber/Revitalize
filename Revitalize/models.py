@@ -13,11 +13,11 @@ from Revitalize.data_analysis_system import DataAnalysisSystem
 #def _(s): # TODO
 #    return s
 
-print_debug = False
+print_debug = True
 
-print_debug_a = True
+print_debug_a = False
 
-print_test_data = True
+print_test_data = False
 
 
 def validate_json(j: str):
@@ -252,6 +252,8 @@ class ModelBase(models.Model):
     ModelHelper.register(_name, 'update_time', 5, to_filter=True, to_serialize=False)
 
     def _verify_key(self, data: dict, key: str, name: str = None, n: int = None, nonfatal: bool = None) -> bool:
+        if print_debug: print(f"{self.__class__.__name__}._verify_key( ... ) for {self}")
+
         # self is context for error message
         if key not in data.keys():
             if nonfatal is None:
@@ -761,7 +763,7 @@ class Form(Displayable):
 
         groups = self.question_groups.order_by('number').all()
 
-        if print_debug: print(f"\t{delegator}recurse groups: {groups}")
+        if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse groups: {groups}")
 
         errors = []
         errors_e = []
@@ -778,14 +780,14 @@ class Form(Displayable):
 
             e: dict
 
-            if print_debug: print(f"\trespond-#{n} e: {e}")
+            if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} e: {e}")
 
             self._verify_key(e, 'element_type', 'element', n)
 
             if e["element_type"] == QuestionGroup.element_type:
                 m += 1
 
-                if print_debug: print(f"\t{delegator}recurse-#{n} {e['element_type']} == {QuestionGroup.element_type}")
+                if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} {e['element_type']} == {QuestionGroup.element_type}")
 
                 try:
                     group = self._fetch_group(groups, e, m)
@@ -793,26 +795,42 @@ class Form(Displayable):
                     errors.append(er)
                     errors_n.append(n)
                     errors_e.append(e)
-                    if print_debug: print(f"\t{delegator}recurse-#{n} errors.append({e}) -> continue")
+                    if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} errors.append({er}) -> continue")
+                    continue
+                except Exception as er:
+                    errors.append(er)
+                    errors_n.append(n)
+                    errors_e.append(e)
+                    if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} errors.append({er}) -> continue")
+                    print(f"Unexpected error in {self.__class__.__name__}.{delegator}recurse( ... ) for {self}: {er}")
                     continue
 
-                if print_debug: print(f"\t{delegator}recurse-#{n} group {group}")
+                if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} group {group}")
 
                 if question_method is not None:
                     try:
-                        if print_debug: print(f"\t{delegator}recurse on group: {group}")
+                        if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse on group.{question_method}: {group}")
 
-                        getattr(group, question_method)(data, submission, e, m, translation, *args, **kwargs)
+                        getattr(group, question_method)(submission_data=data, submission=submission, data=e,
+                                                        group_number=m, values=translation, *args, **kwargs)
 
-                        if print_debug: print(f"\t{delegator}recursed on group: {group}")
+                        if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recursed on group.{question_method}: {group}")
 
-                    except ValidationError as er:
+                    except (ValidationError, ValueError, TypeError) as er:
                         errors.append(er)
                         errors_n.append(n)
                         errors_e.append(e)
+                        if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} group.{question_method} errors.append({er}) -> continue")
+                        continue
+                    except Exception as er:
+                        errors.append(er)
+                        errors_n.append(n)
+                        errors_e.append(e)
+                        if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} group.{question_method} errors.append({er}) -> continue")
+                        print(f"Unexpected error in group.{question_method} in {self.__class__.__name__}.{delegator}recurse( ... ) for {self}: {er}")
                         continue
 
-            elif print_debug: print(f"\t{delegator}recurse-#{n} {e['element_type']} =/= {QuestionGroup.element_type}")
+            elif print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} {e['element_type']} =/= {QuestionGroup.element_type}")
 
         if len(errors) > 0:
             thrown = ValidationError(errors)
@@ -828,11 +846,11 @@ class Form(Displayable):
         return translation if translation is not None else True
 
     def r_validate(self, data: dict, submission: 'Submission') -> bool:
-        return self._recurse(data=data, submission=submission)
+        return self._recurse(data=data, submission=submission, question_method='r_validate', delegator="r_validate")
 
     def respond(self, data: dict, submission: 'Submission') -> dict:
         return self._recurse(data=data, submission=submission, translation= {'responses' : {'all' : {}}},
-                             question_method='respond')
+                             question_method='respond', delegator="respond")
 
     def r_validate_(self, data: dict, submission: 'Submission') -> bool:
         if print_debug: print(f"{self.__class__.__name__}.r_validate( ... ) for {self}")
@@ -886,7 +904,7 @@ class Form(Displayable):
                 if print_debug: print(f"\tr_validate-#{n} group {group}")
 
                 try:
-                    group.recursive_validate(data, submission, e)
+                    group.r_validate(data, submission, e)
                 except (ValidationError, KeyError, LookupError) as er:
                     errors.append(er)
                     errors_n.append(n)
@@ -1206,6 +1224,8 @@ class QuestionGroup(FormElement):
         return self.internal_name
 
     def _fetch_questions(self, m: int = None) -> QuerySet:
+        if print_debug: print(f"{self.__class__.__name__}._fetch_questions( ... ) for {self}")
+
         try:
             questions = self.questions.order_by('number').all()
         except Exception as e:
@@ -1220,9 +1240,12 @@ class QuestionGroup(FormElement):
             if print_debug: print(f"\t_fetch_questions: {text}")
             raise thrown
 
+        if print_debug: print(f"/{self.__class__.__name__}._fetch_questions")
         return questions
 
     def _fetch_question(self, questions: QuerySet, q: dict, n: int) -> 'Question':
+        if print_debug: print(f"{self.__class__.__name__}._fetch_question( ... ) for {self}")
+
         question: Question = None
         bad_id = None
 
@@ -1249,9 +1272,12 @@ class QuestionGroup(FormElement):
             if print_debug: print(f"\t_fetch_question-#{n}... {text}")
             raise thrown
 
+        if print_debug: print(f"/{self.__class__.__name__}._fetch_question")
         return question
 
     def _fetch_value(self, response, q: dict, n: int):
+        if print_debug: print(f"{self.__class__.__name__}._fetch_value( ... ) for {self}")
+
         if QuestionGroup._validated_response_key in q.keys():
             value = q[QuestionGroup._validated_response_key]
 
@@ -1264,6 +1290,7 @@ class QuestionGroup(FormElement):
 
             q[QuestionGroup._validated_response_key] = value
 
+        if print_debug: print(f"/{self.__class__.__name__}._fetch_value")
         return value
 
     def _recurse(self, submission_data: dict, submission: 'Submission', data: dict, *args,
@@ -1283,9 +1310,9 @@ class QuestionGroup(FormElement):
 
         questions = self._fetch_questions(group_number)
 
-        if 'values' in kwargs.keys():
+        if kwargs is not None and 'values' in kwargs.keys():
             values: dict = kwargs['values']
-            if 'responses' in values.keys():
+            if values is not None and 'responses' in values.keys():
                 r: dict = values['responses']
                 group_values = {}
                 r[self.var_name(group_number)] = group_values
@@ -1307,7 +1334,7 @@ class QuestionGroup(FormElement):
 
             q: dict
 
-            if print_debug: print(f"\t{delegator}recurse-#{n} q: {q}")
+            if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} q: {q}")
 
             try:
                 question = self._fetch_question(questions, q, n)
@@ -1315,7 +1342,14 @@ class QuestionGroup(FormElement):
                 errors.append(e)
                 errors_n.append(n)
                 errors_q.append(q)
-                if print_debug: print(f"\t{delegator}recurse-#{n} errors.append({e}) -> continue")
+                if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} errors.append({e}) -> continue")
+                continue
+            except Exception as e:
+                errors.append(e)
+                errors_n.append(n)
+                errors_q.append(q)
+                if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} errors.append({e}) -> continue")
+                print(f"Unexpected error in {self.__class__.__name__}.{delegator}recurse( ... ) for {self}: {e}")
                 continue
 
             try:
@@ -1326,13 +1360,22 @@ class QuestionGroup(FormElement):
                 errors_n.append(n)
                 errors_q.append(q)
                 if print_debug:
-                    print(f"\t{delegator}recurse-#{n} {e.detail if hasattr(e, 'detail') else 'details missing'}" +
+                    print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} {e.detail if hasattr(e, 'detail') else 'details missing'}" +
                           f"; errors.append({e}) -> continue")
+                continue
+            except Exception as e:
+                errors.append(e)
+                errors_n.append(n)
+                errors_q.append(q)
+                if print_debug:
+                    print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} {e.detail if hasattr(e, 'detail') else 'details missing'}" +
+                          f"; errors.append({e}) -> continue")
+                print(f"Unexpected error in {self.__class__.__name__}.{delegator}recurse( ... ) for {self}: {e}")
                 continue
 
             response = q["response"]
 
-            if print_debug: print(f"\t{delegator}recurse-#{n} response: {response}")
+            if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} response: {response}")
 
             try:
                 value = self._fetch_value(response, q, n)
@@ -1341,23 +1384,30 @@ class QuestionGroup(FormElement):
                 errors.append(e)
                 errors_n.append(n)
                 errors_q.append(n)
-                if print_debug: print(f"\t{delegator}recurse-#{n} errors.append({e}) -> continue")
+                if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} errors.append({e}) -> continue")
+                continue
+            except Exception as e:
+                errors.append(e)
+                errors_n.append(n)
+                errors_q.append(n)
+                if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} errors.append({e}) -> continue")
+                print(f"Unexpected error in {self.__class__.__name__}.{delegator}recurse( ... ) for {self}: {e}")
                 continue
 
             if question_method is not None:
                 try:
-                    if print_debug: print(f"\t{delegator}recurse on question: {question}")
+                    if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse on question: {question}")
 
                     getattr(question, question_method)(submission_data, submission, value, group_number, n_max,
                                                        *args, **kwargs)
 
-                    if print_debug: print(f"\t{delegator}recursed on question: {question}")
+                    if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recursed on question: {question}")
 
                 except (ValidationError, ValueError, TypeError) as e:
                     errors.append(e)
                     errors_n.append(n)
                     errors_q.append(q)
-                    if print_debug: print(f"\t{delegator}recurse-#{n} errors.append({e}) -> continue")
+                    if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} errors.append({e}) -> continue")
                     continue
                 except RuntimeError as e:
                     print(f"Runtime error during recursion on question {question} method {question_method} in group" +
@@ -1366,7 +1416,16 @@ class QuestionGroup(FormElement):
                     errors.append(ValidationError(text))
                     errors_n.append(n)
                     errors_q.append(q)
-                    if print_debug: print(f"\t{delegator}recurse-#{n} Runtime Error {e}) -> continue")
+                    if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} Runtime Error {e}) -> continue")
+                    continue
+                except Exception as e:
+                    print(f"Unknown error during recursion on question {question} method {question_method} in group" +
+                          f" {self} from submission {submission} with data {submission_data} ({e})")
+                    text = _('Unknown error occurred')
+                    errors.append(ValidationError(text))
+                    errors_n.append(n)
+                    errors_q.append(q)
+                    if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} ? Error {e}) -> continue")
                     continue
 
         if len(errors) > 0:
@@ -1374,21 +1433,22 @@ class QuestionGroup(FormElement):
             thrown.rev_error_list = errors
             thrown.rev_error_nums = errors_n
             thrown.rev_error_questions = errors_q
-            if print_debug: print(f"\t{delegator}recurse #errors = {len(errors)} {errors}")
+            if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse #errors = {len(errors)} {errors}")
             raise thrown
 
-        if print_debug: print(f"/{delegator}recurse")
+        if print_debug: print(f"/{self.__class__.__name__}.{delegator}recurse")
         return True
 
-    def recursive_validate(self, submission_data: dict, submission: 'Submission', data: dict,
-                           group_number: int = None) -> bool:
-        return self._recurse(submission_data=submission_data, submission=submission, data=data,
-                             group_number=group_number, delegator='r_validate')
+    def r_validate(self, submission_data: dict, submission: 'Submission', data: dict,
+                   group_number: int = None, *args, **kwargs) -> bool:
+        return self._recurse(submission_data=submission_data, submission=submission, data=data, *args,
+                             group_number=group_number, delegator='r_validate', **kwargs)
 
     def respond(self, submission_data: dict, submission: 'Submission', data: dict,
-                group_number: int = None, values: dict=None) -> bool:
-        return self._recurse(submission_data=submission_data, submission=submission, data=data,
-                             group_number=group_number, values=values, question_method='respond', delegator='respond')
+                group_number: int = None, values: dict = None, *args, **kwargs) -> bool:
+        return self._recurse(submission_data=submission_data, submission=submission, data=data, *args,
+                             group_number=group_number, values=values, question_method='respond', delegator='respond',
+                             **kwargs)
 
     def r_validate_(self, submission_data: dict, submission: 'Submission', data: dict, group_number: int = None) -> bool:
         if print_debug: print(f"{self.__class__.__name__}.r_validate( ... ) for {self}")
@@ -1817,11 +1877,46 @@ class FiniteChoiceQuestion(QuestionType):
     ModelHelper.register(_name, 'num_possibilities', 75, to_filter=True)
     ModelHelper.register(_name, 'initial', 75, to_filter=True)
 
-    def force_value_type(self, value, translate=False):
+    def force_value_type(self, value, translate=False) -> int:
+        data = value
         if not isinstance(value, int):
-            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
-            return int(value)
-        return value
+            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)}, {translate})")
+            try:
+                data = int(value)
+            except (TypeError, ValueError) as e:  # TODO None check
+                text = _('Expected integer, received %(value)s causing %(error)s') % {"value": value, "error": e.__str__()}
+                thrown = ValidationError(text)
+                thrown.__cause__ = e
+                raise thrown
+            except Exception as e:
+                print(f"Unexpected parse error in {self._name}.force_value_type({value} {type(value)}, {translate}): {e}")
+                text = _('Unknown issue with value: %(value)s causing %(error)s') % {"value": value, "error": e.__str__()}
+                thrown = ValidationError(text)
+                thrown.__cause__ = e
+                raise thrown
+        return data
+
+    def validate_value(self, data: int) -> bool:
+        if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
+
+        value = data
+
+        if not isinstance(data, int):
+            try:
+                value = int(data)
+                if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int so {data} -> {value} {type(value)}")
+            except ValueError as e:
+                if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int -> ValueError {e}")
+                text = _('Expected integer, received %(value)d causing %(value_error)s') % {"value": value, "value_error": e.__str__()}
+                thrown = ValidationError(text)
+                thrown.__cause__ = e
+                raise thrown
+
+        if not (0 < value <= self.num_possibilities):
+            if print_debug: print(f"{self._name}.validate_value: 0 >< {data} >< {self.num_possibilities} -> out of range")
+            text = _('Value %(value)d is out of range: 1 - %(num_possibilities)d') % {"value": value, "num_possibilities": self.num_possibilities}
+            raise ValidationError(text)
+        return True
 
     def default_labels(self):
         return json.dumps([str(n) for n in range(1, self.num_possibilities + 1)])
@@ -1858,8 +1953,14 @@ class IntRangeQuestion(FiniteChoiceQuestion):
             if print_debug: print(f"{self._name}.force_value_type({value} {type(value)}, {translate})")
             try:
                 data = int(value)
-            except TypeError as e:
-                text = _('Expected integer, received %(value)d causing %(type_error)s') % {"value": value, "type_error": e.__str__()}
+            except (TypeError, ValueError) as e:  # TODO None check
+                text = _('Expected integer, received %(value)s causing %(error)s') % {"value": value, "error": e.__str__()}
+                thrown = ValidationError(text)
+                thrown.__cause__ = e
+                raise thrown
+            except Exception as e:
+                print(f"Unexpected parse error in {self._name}.force_value_type({value} {type(value)}, {translate}): {e}")
+                text = _('Unknown issue with value: %(value)s causing %(error)s') % {"value": value, "error": e.__str__()}
                 thrown = ValidationError(text)
                 thrown.__cause__ = e
                 raise thrown
@@ -1962,33 +2063,33 @@ class ExclusiveChoiceQuestion(FiniteChoiceQuestion):
     ModelHelper.register(_name, 'group', 85, to_serialize=False, foreign=QuestionGroup)
     ModelHelper.register(_name, 'labels', 70, text_type='JSON', foreign=StringGroup)
 
-    def force_value_type(self, value, translate=False) -> int:
-        if not isinstance(value, int):
-            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
-            return int(value)
-        return value
-
-    def validate_value(self, data: int) -> bool:
-        if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
-
-        value = data
-
-        if not isinstance(data, int):
-            try:
-                value = int(data)
-                if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int so {data} -> {value} {type(value)}")
-            except ValueError as e:
-                if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int -> ValueError {e}")
-                text = _('Expected integer, received %(value)s causing %(value_error)s') % {"value": f"{value}", "value_error": e.__str__()}
-                thrown = ValidationError(text)
-                thrown.__cause__ = e
-                raise thrown
-
-        if not (0 < value <= self.num_possibilities):
-            if print_debug: print(f"{self._name}.validate_value: 0 >< {data} >< {self.num_possibilities} -> out of range")
-            text = _('Value %(value)d is out of range: 1 - %(num_possibilities)d') % {"value": value, "num_possibilities": self.num_possibilities}
-            raise ValidationError(text)
-        return True
+    # def force_value_type(self, value, translate=False) -> int:
+    #     if not isinstance(value, int):
+    #         if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
+    #         return int(value)
+    #     return value
+    #
+    # def validate_value(self, data: int) -> bool:
+    #     if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
+    #
+    #     value = data
+    #
+    #     if not isinstance(data, int):
+    #         try:
+    #             value = int(data)
+    #             if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int so {data} -> {value} {type(value)}")
+    #         except ValueError as e:
+    #             if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int -> ValueError {e}")
+    #             text = _('Expected integer, received %(value)s causing %(value_error)s') % {"value": f"{value}", "value_error": e.__str__()}
+    #             thrown = ValidationError(text)
+    #             thrown.__cause__ = e
+    #             raise thrown
+    #
+    #     if not (0 < value <= self.num_possibilities):
+    #         if print_debug: print(f"{self._name}.validate_value: 0 >< {data} >< {self.num_possibilities} -> out of range")
+    #         text = _('Value %(value)d is out of range: 1 - %(num_possibilities)d') % {"value": value, "num_possibilities": self.num_possibilities}
+    #         raise ValidationError(text)
+    #     return True
 
 
 class MultiChoiceQuestion(FiniteChoiceQuestion):
@@ -2157,7 +2258,7 @@ class Submission(ModelBase):
     ModelHelper.register(_name, 'parsed', 10, False, to_serialize=False, to_search=True)
     ModelHelper.register(_name, 'processed', 10, False, to_serialize=False, to_search=True)
 
-    def validate(self, data=None):
+    def r_validate(self, data=None):
         if data is None:
             try:
                 data = json.loads(self.raw_data)
@@ -2166,7 +2267,15 @@ class Submission(ModelBase):
                 thrown.__cause__ = e
                 raise thrown
 
-        self.form.r_validate(data, self)
+        try:
+            self.form.r_validate(data, self)
+        except ValidationError as e:
+            raise e
+        except Exception as e:
+            thrown = ValidationError(f"Unable to parse submission data as JSON.")
+            thrown.__cause__ = e
+            raise thrown
+
 
         self.validated = True
 
