@@ -276,13 +276,16 @@ class ModelBase(models.Model):
 
             if n is not None:
                 text = _('Unable to find "%(key)s" in data for %(name)s #%(n)d: %(me)s') % \
-                       {'key': key, 'n': n, 'me': self.__str__(), 'name': name}
+                       {'key': key, 'n': n, 'me': str(self), 'name': name}
             else:
                 text = _('Unable to find "%(key)s" in data for %(name)s: %(me)s') % \
-                       {'key': key, 'me': self.__str__(), 'name': name}
+                       {'key': key, 'me': str(self), 'name': name}
 
             thrown = KeyError(text)
             thrown.detail = text
+            thrown.user_message = _('Returned data missing was missing information. The expected field %(expectation)s.') % \
+                                  {'expectation' : key}
+            thrown.bad_value = key
             if print_debug: print(f"\t_verify_key: {text}")
             raise thrown
         return True
@@ -744,6 +747,8 @@ class Form(Displayable):
             text = _('Unable to find question group #%(n)d') % {"n": n}
             thrown = LookupError(text)
             thrown.detail = text
+            thrown.user_message = _('Data for question group #%(n)d was missing.') % {"n": n}
+            thrown.bad_value = n if bad_id is None else bad_id
             if print_debug: print(f"\t_fetch_group-#{n}... {text}")
             raise thrown
 
@@ -798,6 +803,8 @@ class Form(Displayable):
                     if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} errors.append({er}) -> continue")
                     continue
                 except Exception as er:
+                    er.user_message = _('Unexpected error finding data for question group #%(n)d.') % {"n": n}
+                    er.bad_value = n
                     errors.append(er)
                     errors_n.append(n)
                     errors_e.append(e)
@@ -823,6 +830,8 @@ class Form(Displayable):
                         if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} group.{question_method} errors.append({er}) -> continue")
                         continue
                     except Exception as er:
+                        er.user_message = _('Unexpected error processing response for question #%(n)d.') % {"n": n}
+                        er.bad_value = n
                         errors.append(er)
                         errors_n.append(n)
                         errors_e.append(e)
@@ -837,6 +846,7 @@ class Form(Displayable):
             thrown.rev_error_list = errors
             thrown.rev_error_nums = errors_n
             thrown.rev_error_elements = errors_e
+            thrown.user_message = _('#%(num)d errors occured processing the submission.') % {'num': len(errors)}
             raise thrown
 
         if print_debug: print(f"/{delegator}recurse")
@@ -1233,7 +1243,7 @@ class QuestionGroup(FormElement):
                 m = self.number
 
             text = _('Unable to query database for questions for question group #%(m)d: %(group)s') % \
-                   {'m': m, 'group': self.__str__()}
+                   {'m': m, 'group': str(self)}
             thrown = LookupError(text)
             thrown.detail = text
             thrown.__cause__ = e
@@ -1269,6 +1279,8 @@ class QuestionGroup(FormElement):
             text = _('Unable to find question #%(n)d') % {"n": n}
             thrown = LookupError(text)
             thrown.detail = text
+            thrown.user_message = _('Data for question #%(n)d was missing.') % {"n": n}
+            thrown.bad_value = n if bad_id is None else bad_id
             if print_debug: print(f"\t_fetch_question-#{n}... {text}")
             raise thrown
 
@@ -1345,6 +1357,8 @@ class QuestionGroup(FormElement):
                 if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} errors.append({e}) -> continue")
                 continue
             except Exception as e:
+                e.user_message = _('Unexpected error finding data for question #%(n)d.') % {"n": n}
+                e.bad_value = n
                 errors.append(e)
                 errors_n.append(n)
                 errors_q.append(q)
@@ -1356,6 +1370,7 @@ class QuestionGroup(FormElement):
                 if not question._verify_key(q, 'response', 'question', n, question.optional):
                     continue
             except KeyError as e:
+                e.user_message = _('No response provided for question #%(n)d.') % {"n": n}
                 errors.append(e)
                 errors_n.append(n)
                 errors_q.append(q)
@@ -1364,6 +1379,8 @@ class QuestionGroup(FormElement):
                           f"; errors.append({e}) -> continue")
                 continue
             except Exception as e:
+                e.user_message = _('Unexpected error finding response for question #%(n)d.') % {"n": n}
+                e.bad_value = n
                 errors.append(e)
                 errors_n.append(n)
                 errors_q.append(q)
@@ -1387,6 +1404,8 @@ class QuestionGroup(FormElement):
                 if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} errors.append({e}) -> continue")
                 continue
             except Exception as e:
+                e.user_message = _('Unexpected error parsing response for question #%(n)d.') % {"n": n}
+                e.bad_value = n
                 errors.append(e)
                 errors_n.append(n)
                 errors_q.append(n)
@@ -1412,6 +1431,8 @@ class QuestionGroup(FormElement):
                 except RuntimeError as e:
                     print(f"Runtime error during recursion on question {question} method {question_method} in group" +
                           f" {self} from submission {submission} with data {submission_data} ({e})")
+                    e.user_message = _('Unexpected error processing response for question #%(n)d.') % {"n": n}
+                    e.bad_value = n
                     text = _('Unknown runtime error occurred')
                     errors.append(ValidationError(text))
                     errors_n.append(n)
@@ -1422,6 +1443,8 @@ class QuestionGroup(FormElement):
                     print(f"Unknown error during recursion on question {question} method {question_method} in group" +
                           f" {self} from submission {submission} with data {submission_data} ({e})")
                     text = _('Unknown error occurred')
+                    e.user_message = _('Unexpected error processing response for question #%(n)d.') % {"n": n}
+                    e.bad_value = n
                     errors.append(ValidationError(text))
                     errors_n.append(n)
                     errors_q.append(q)
@@ -1433,6 +1456,9 @@ class QuestionGroup(FormElement):
             thrown.rev_error_list = errors
             thrown.rev_error_nums = errors_n
             thrown.rev_error_questions = errors_q
+            thrown.user_message = _('#%(num)d errors occured processing question group #%(n)d.') % \
+                             {"n": group_number, 'num': len(errors)}
+            thrown.bad_value = group_number
             if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse #errors = {len(errors)} {errors}")
             raise thrown
 
@@ -1710,6 +1736,8 @@ class Question(Displayable):
         except Exception as e:
             thrown = RuntimeError(f"Unable to respond to question {self} from {submission} using {value} due to {e}")
             thrown.__cause__ = e
+            thrown.user_message = _('Unexpected error when storing response.')
+            thrown.bad_value = e.__class__.__name__ if e.__class__ is not None else '?'
             raise thrown
 
         var_name = "var_name_unset"
@@ -1725,7 +1753,7 @@ class Question(Displayable):
 
             if group_values is not None:
                 group_values[var_name] = value
-        except Exception as e:
+        except Exception as e: # TODO make non-fatal?
             thrown = RuntimeError(f"Unable to add variable for {self} from {submission}, {var_name} " +
                                   f"to values dictionary with value {value} due to {e}")
             thrown.__cause__ = e
@@ -1735,6 +1763,18 @@ class Question(Displayable):
 class QuestionType(ModelBase):
     _name = 'QuestionType'  # internal name
     _parent = 'ModelBase'  # internal name
+
+    class ValueType(models.TextChoices):
+        UNKNOWN = '?', _('Unknown')
+        STRING = 'S', _('String')
+        INT = 'I', _('Integer')
+        FLOAT = 'F', _('Float')
+        BOOLEAN = 'B', _('Boolean')
+        BITS = 'T', _('Bit Field')
+
+    question_group_type = QuestionGroup.DataType.UNKNOWN.name.replace(" ", "_").lower()
+    value_type = ValueType.UNKNOWN.value
+    response_type = QuestionGroup.ResponseType.UNKNOWN.value
 
     class Meta:
         abstract = True
@@ -1746,30 +1786,94 @@ class QuestionType(ModelBase):
     ModelHelper.inherit(_parent, _name)
 
     def force_value_type(self, value, translate=False):
-        if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
-        raise ValidationError("Not Implemented")
+        raise NotImplementedError(f"force_value_type called on abstract object")
 
-    def validate_value(self, data):
-        if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
-        raise ValidationError("Not Implemented")
+    def _force_value_type(self, value, value_type=None):
+        if value_type is None:
+            value_type = self.value_type
+
+        data = value
+        expectation = ""
+
+        if value_type == QuestionType.ValueType.UNKNOWN or value_type is None:
+            text = _('Invalid question type %(expected_type)s in %(self)s, ' +
+                     'received %(value)s <%(received_type)s>') % \
+                   {'expected_type': self.value_type, 'self': str(self), 'value': value,
+                    'received_type': str(type(value))}
+            thrown = ValidationError(text)
+            thrown.user_message = _('Question type is invalid.')
+            thrown.bad_value = value_type
+            raise thrown
+
+        try:
+            if value_type == QuestionType.ValueType.STRING.value and not isinstance(value, str):
+                expectation = _('text')
+                if print_debug:
+                    print(f"{self._name}.force_value_type<{value_type}>({value} {type(value)}, {value_type})")
+                data = str(value)
+            elif value_type == QuestionType.ValueType.INT.value and not isinstance(value, int):
+                expectation = _('an integer number')
+                if print_debug:
+                    print(f"{self._name}.force_value_type<{value_type}>({value} {type(value)}, {value_type})")
+                data = int(value)
+            elif value_type == QuestionType.ValueType.FLOAT.value and not isinstance(value, float):
+                expectation = _('a decimal number')
+                if print_debug:
+                    print(f"{self._name}.force_value_type<{value_type}>({value} {type(value)}, {value_type})")
+                data = float(value)
+            elif value_type == QuestionType.ValueType.BOOLEAN.value and not isinstance(value, bool):
+                expectation = _('a boolean value')
+                if print_debug:
+                    print(f"{self._name}.force_value_type<{value_type}>({value} {type(value)}, {value_type})")
+                    data = bool(value)
+            elif value_type == QuestionType.ValueType.BITS.value and not isinstance(value, int):  # TODO
+                expectation = _('a bit field')
+                if print_debug:
+                    print(f"{self._name}.force_value_type<{value_type}>({value} {type(value)}, {value_type})")
+                data = int(value)
+            else:
+                if print_debug:
+                    print(f"{self._name}.force_value_type<?{value_type}?>({value} {type(value)}, {value_type})")
+        except (TypeError, ValueError) as e:  # TODO None check
+            # print(e)
+            # text = _('Expected %(expected_type)s in %(self)s, received %(value)s <%(received_type)s> ' +
+            #          'causing %(error)s') % \
+            #        {'expected_type': value_type, 'self': str(self), 'value': value,
+            #         'received_type': str(type(value)), 'error': e.__class__}
+            thrown = ValidationError(f"Expected {value_type} in {self}, received {value} <{type(value)}> causing {e}")
+            thrown.__cause__ = e
+            thrown.user_message = _('Entered value is not as expected. The question expected %(expectation)s.') % \
+                                  {'expectation' : expectation}
+            thrown.bad_value = type(value).__name__
+            raise thrown
+        except Exception as e:
+            print(f"Unexpected parse error in {self._name}.force_value_type({value} {type(value)}, {value_type}): {e}")
+            text = _('Unknown error parsing value. ' +
+                     'Expected %(expected_type)s in %(self)s, received %(value)s <%(received_type)s> ' +
+                     'causing %(error)s') % \
+                   {'expected_type': value_type, 'self': str(self), 'value': value,
+                    'received_type': str(type(value)), 'error': e.__class__}
+            thrown = ValidationError(text)
+            thrown.__cause__ = e
+            thrown.user_message = _('Unexpected error with the entered value. The question expected %(expectation)s.') % \
+                                  {'expectation' : expectation}
+            thrown.bad_value = type(value).__name__
+            raise thrown
+
+        return data
+
+    def validate_value(self, value) -> bool:
+        thrown = ValidationError("validate_value not implemented")
+        thrown.__cause__ = NotImplementedError(f"validate_value called on abstract object")
 
 
-class SingleInputQuestion(QuestionType):
-    _name = 'SingleInputQuestion'  # internal name
+class TextQuestion(QuestionType):
+    _name = 'TextQuestion'  # internal name
     _parent = 'QuestionType'  # internal name
 
-    class Meta:
-        abstract = True
-
-    # Used with views and serializers
-    ModelHelper.inherit(_parent, _name)
-
-
-class TextQuestion(SingleInputQuestion):
-    _name = 'TextQuestion'  # internal name
-    _parent = 'SingleInputQuestion'  # internal name
-
-    question_group_type = "text"
+    question_group_type = QuestionGroup.DataType.TEXT.name.replace(" ", "_").lower()
+    response_type = QuestionGroup.ResponseType.TEXT.value
+    value_type = QuestionType.ValueType.STRING.value
 
     min_length = models.IntegerField(null=False)
     max_length = models.IntegerField(null=False)
@@ -1784,23 +1888,41 @@ class TextQuestion(SingleInputQuestion):
     ModelHelper.register(_name, 'min_length', 75, to_filter=True)
     ModelHelper.register(_name, 'max_length', 75, to_filter=True)
 
-    def force_value_type(self, value, translate=False):
-        if not isinstance(value, str):
-            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
-            return str(value)
-        return value
+    def force_value_type(self, value, translate=False) -> str:
+        return super()._force_value_type(value)
 
     def validate_value(self, data: str) -> bool:
         if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
-        value = data
-        return self.min_length < len(value) < self.max_length
+        value = data if isinstance(data, str) else super()._force_value_type(data)
+
+        if self.min_length > len(value):
+            if print_debug:
+                print(f"{self._name}.validate_value: {self.min_length} > len({data}) -> out of range")
+            thrown = ValidationError(f"Text length {len(value)} < minimum length {self.min_length}")
+            thrown.user_message = _('Entered text is shorter than the minimum length: %(min)d') % \
+                                  {'min': self.min_length}
+            thrown.bad_value = len(value)
+            raise thrown
+
+        if len(value) > self.max_length:
+            if print_debug:
+                print(f"{self._name}.validate_value: len({data}) > {self.max_length} -> out of range")
+            thrown = ValidationError(f"Text length {len(value)} > maximum length {self.max_length}")
+            thrown.user_message = _('Entered text is longer than the maximum length: %(max)d') % \
+                                  {'max': self.max_length}
+            thrown.bad_value = len(value)
+            raise thrown
+
+        return True
 
 
-class IntQuestion(SingleInputQuestion):
+class IntQuestion(QuestionType):
     _name = 'IntQuestion'  # internal name
-    _parent = 'SingleInputQuestion'  # internal name
+    _parent = 'QuestionType'  # internal name
 
-    question_group_type = "integer"
+    question_group_type = QuestionGroup.DataType.INT.name.replace(" ", "_").lower()
+    response_type = QuestionGroup.ResponseType.INT.value
+    value_type = QuestionType.ValueType.INT.value
 
     min = models.IntegerField(null=False)
     max = models.IntegerField(null=False)
@@ -1817,23 +1939,41 @@ class IntQuestion(SingleInputQuestion):
     ModelHelper.register(_name, 'min', 75, to_filter=True)
     ModelHelper.register(_name, 'max', 75, to_filter=True)
 
-    def force_value_type(self, value, translate=False):
-        if not isinstance(value, int):
-            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
-            return int(value)
-        return value
+    def force_value_type(self, value, translate=False) -> int:
+        return super()._force_value_type(value)
 
     def validate_value(self, data: int) -> bool:
         if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
-        value = data
-        return self.min < value < self.max
+        value = data if isinstance(data, int) else super()._force_value_type(data)
+
+        if self.min > value:
+            if print_debug:
+                print(f"{self._name}.validate_value: {self.min} > {data} -> out of range")
+            thrown = ValidationError(f"Value {value} < minimum {self.min}")
+            thrown.user_message = _('Entered value %(value)d is too small. minimum: %(min)d') % \
+                                  {'value': value, 'min': self.min}
+            thrown.bad_value = value
+            raise thrown
+
+        if value > self.max:
+            if print_debug:
+                print(f"{self._name}.validate_value: {data} > {self.max} -> out of range")
+            thrown = ValidationError(f"Value {value} > maximum {self.max}")
+            thrown.user_message = _('Entered value %(value)d is too big. maximum: %(max)d') % \
+                                  {'value': value, 'max': self.max}
+            thrown.bad_value = value
+            raise thrown
+
+        return True
 
 
-class FloatQuestion(SingleInputQuestion):
+class FloatQuestion(QuestionType):
     _name = 'FloatQuestion'  # internal name
-    _parent = 'SingleInputQuestion'  # internal name
+    _parent = 'QuestionType'  # internal name
 
-    question_group_type = "decimal"
+    question_group_type = QuestionGroup.DataType.FLOAT.name.replace(" ", "_").lower()
+    response_type = QuestionGroup.ResponseType.FLOAT.value
+    value_type = QuestionType.ValueType.FLOAT.value
 
     min = models.FloatField(null=False)
     max = models.FloatField(null=False)
@@ -1850,21 +1990,40 @@ class FloatQuestion(SingleInputQuestion):
     ModelHelper.register(_name, 'min', 75, to_filter=True)
     ModelHelper.register(_name, 'max', 75, to_filter=True)
 
-    def force_value_type(self, value, translate=False):
-        if not isinstance(value, float):
-            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
-            return float(value)
-        return value
+    def force_value_type(self, value, translate=False) -> float:
+        return super()._force_value_type(value)
 
     def validate_value(self, data: float) -> bool:
         if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
-        value = data
-        return self.min < value < self.max
+        value = data if isinstance(data, float) else super()._force_value_type(data)
+
+        if self.min > value:
+            if print_debug:
+                print(f"{self._name}.validate_value: {self.min} > {data} -> out of range")
+            thrown = ValidationError(f"Value {value} < minimum {self.min}")
+            thrown.user_message = _('Entered value %(value)d is too small. minimum: %(min)d') % \
+                                  {'value': value, 'min': self.min}
+            thrown.bad_value = value
+            raise thrown
+
+        if value > self.max:
+            if print_debug:
+                print(f"{self._name}.validate_value: {data} > {self.max} -> out of range")
+            thrown = ValidationError(f"Value {value} > maximum {self.max}")
+            thrown.user_message = _('Entered value %(value)d is too big. maximum: %(max)d') % \
+                                  {'value': value, 'max': self.max}
+            thrown.bad_value = value
+            raise thrown
+
+        return True
 
 
 class FiniteChoiceQuestion(QuestionType):
     _name = 'FiniteChoiceQuestion'  # internal name
     _parent = 'QuestionType'  # internal name
+
+    response_type = QuestionGroup.ResponseType.INT.value
+    value_type = QuestionType.ValueType.INT.value
 
     num_possibilities = models.IntegerField(null=False)
     initial = models.IntegerField(null=False)
@@ -1878,44 +2037,30 @@ class FiniteChoiceQuestion(QuestionType):
     ModelHelper.register(_name, 'initial', 75, to_filter=True)
 
     def force_value_type(self, value, translate=False) -> int:
-        data = value
-        if not isinstance(value, int):
-            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)}, {translate})")
-            try:
-                data = int(value)
-            except (TypeError, ValueError) as e:  # TODO None check
-                text = _('Expected integer, received %(value)s causing %(error)s') % {"value": value, "error": e.__str__()}
-                thrown = ValidationError(text)
-                thrown.__cause__ = e
-                raise thrown
-            except Exception as e:
-                print(f"Unexpected parse error in {self._name}.force_value_type({value} {type(value)}, {translate}): {e}")
-                text = _('Unknown issue with value: %(value)s causing %(error)s') % {"value": value, "error": e.__str__()}
-                thrown = ValidationError(text)
-                thrown.__cause__ = e
-                raise thrown
-        return data
+        return super()._force_value_type(value)
 
     def validate_value(self, data: int) -> bool:
         if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
+        value = data if isinstance(data, int) else super()._force_value_type(data)
 
-        value = data
+        if 1 > value:
+            if print_debug:
+                print(f"{self._name}.validate_value: 1 > {data} -> out of range")
+            thrown = ValidationError(f"Value {value} < minimum 1")
+            thrown.user_message = _('There is no choice #%(value)d.') % \
+                                  {'value': value}
+            thrown.bad_value = value
+            raise thrown
 
-        if not isinstance(data, int):
-            try:
-                value = int(data)
-                if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int so {data} -> {value} {type(value)}")
-            except ValueError as e:
-                if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int -> ValueError {e}")
-                text = _('Expected integer, received %(value)d causing %(value_error)s') % {"value": value, "value_error": e.__str__()}
-                thrown = ValidationError(text)
-                thrown.__cause__ = e
-                raise thrown
+        if value > self.num_possibilities:
+            if print_debug:
+                print(f"{self._name}.validate_value: {data} > {self.num_possibilities} -> out of range")
+            thrown = ValidationError(f"Value {value} > maximum {self.num_possibilities}")
+            thrown.user_message = _('There is no choice #%(value)d.') % \
+                                  {'value': value}
+            thrown.bad_value = value
+            raise thrown
 
-        if not (0 < value <= self.num_possibilities):
-            if print_debug: print(f"{self._name}.validate_value: 0 >< {data} >< {self.num_possibilities} -> out of range")
-            text = _('Value %(value)d is out of range: 1 - %(num_possibilities)d') % {"value": value, "num_possibilities": self.num_possibilities}
-            raise ValidationError(text)
         return True
 
     def default_labels(self):
@@ -1927,6 +2072,9 @@ class IntRangeQuestion(FiniteChoiceQuestion):
     _parent = 'FiniteChoiceQuestion'  # internal name
 
     question_group_type = "integer_range"
+    # question_group_type = QuestionGroup.DataType.INT_RANGE.name.replace(" ", "_").lower()
+    response_type = QuestionGroup.ResponseType.INT.value
+    value_type = QuestionType.ValueType.INT.value
 
     min = models.IntegerField(null=False)
     max = models.IntegerField(null=False)
@@ -1937,7 +2085,7 @@ class IntRangeQuestion(FiniteChoiceQuestion):
 
     # Can't inherit
     group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True,
-                                 related_name='int_range_group', db_index=True)
+                                 related_name="int_range_group", db_index=True)
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -1948,22 +2096,7 @@ class IntRangeQuestion(FiniteChoiceQuestion):
     ModelHelper.register(_name, 'step', 75, to_filter=True)
 
     def force_value_type(self, value, translate=False) -> int:
-        data = value
-        if not isinstance(value, int):
-            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)}, {translate})")
-            try:
-                data = int(value)
-            except (TypeError, ValueError) as e:  # TODO None check
-                text = _('Expected integer, received %(value)s causing %(error)s') % {"value": value, "error": e.__str__()}
-                thrown = ValidationError(text)
-                thrown.__cause__ = e
-                raise thrown
-            except Exception as e:
-                print(f"Unexpected parse error in {self._name}.force_value_type({value} {type(value)}, {translate}): {e}")
-                text = _('Unknown issue with value: %(value)s causing %(error)s') % {"value": value, "error": e.__str__()}
-                thrown = ValidationError(text)
-                thrown.__cause__ = e
-                raise thrown
+        data = super()._force_value_type(value)
 
         if translate:
             data = self.min + (data - 1) * self.step
@@ -1971,30 +2104,36 @@ class IntRangeQuestion(FiniteChoiceQuestion):
 
     def validate_value(self, data: int) -> bool:
         if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
+        value = data if isinstance(data, int) else super()._force_value_type(data)
 
-        value = data
-
-        if not isinstance(data, int):
-            try:
-                value = int(data)
-                if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int so {data} -> {value} {type(value)}")
-            except ValueError as e:
-                if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int -> ValueError {e}")
-                text = _('Expected integer, received %(value)d causing %(value_error)s') % {"value": value, "value_error": e.__str__()}
-                thrown = ValidationError(text)
-                thrown.__cause__ = e
-                raise thrown
-
-        if not (self.min <= value <= self.max):
-            if print_debug: print(f"{self._name}.validate_value: {self.min} >< {data} >< {self.max} -> out of range")
-            text = _('Value %(value)d is out of range: %(min)d - %(max)d') % {"value": value, "min": self.min, "max": self.max}
-            thrown = ValidationError(text)
+        if self.min > value:
+            if print_debug:
+                print(f"{self._name}.validate_value: {self.min} > {data} -> out of range")
+            thrown = ValidationError(f"Value {value} < minimum {self.min}")
+            thrown.user_message = _('Entered value %(value)d is too small. minimum: %(min)d') % \
+                                  {'value': value, 'min': self.min}
+            thrown.bad_value = value
             raise thrown
-        elif not (self.step == 1 or (value - self.min % self.step) == 0):
-            if print_debug: print(f"{self._name}.validate_value: {data} - {self.min} % {self.step} =/= 0 -> impossible value")
-            text = _('Value %(value)d is not allowed because step size is %(step)d') % {"value": value, "step": self.step}
-            thrown = ValidationError(text)
+
+        if value > self.max:
+            if print_debug:
+                print(f"{self._name}.validate_value: {data} > {self.max} -> out of range")
+            thrown = ValidationError(f"Value {value} > maximum {self.max}")
+            thrown.user_message = _('Entered value %(value)d is too big. maximum: %(max)d') % \
+                                  {'value': value, 'max': self.max}
+            thrown.bad_value = value
             raise thrown
+
+        if self.step != 1 and (value - self.min % self.step) != 0:
+            if print_debug:
+                print(f"{self._name}.validate_value: {data} - {self.min} % {self.step} =/= 0 -> impossible value")
+            thrown = ValidationError(f"Value {value} incompatible with step size {self.step} and minimum {self.min}")
+            thrown.user_message = _('Entered value %(value)d is not in range %(min)d to %(max)d ' +
+                                    'by %(step)d\'s. step size: %(step)d') % \
+                                  {'value': value, 'min': self.min, 'max': self.max, 'step': self.step}
+            thrown.bad_value = value
+            raise thrown
+
         return True
 
 
@@ -2003,7 +2142,11 @@ class BooleanChoiceQuestion(FiniteChoiceQuestion):
     _parent = 'FiniteChoiceQuestion'  # internal name
 
     question_group_type = "boolean"
-    _default_labels = json.dumps(["yes", "no"])
+    # question_group_type = QuestionGroup.DataType.BOOLEAN.name.replace(" ", "_").lower()
+    response_type = QuestionGroup.ResponseType.INT.value
+    value_type = QuestionType.ValueType.BOOLEAN.value
+
+    _default_labels = json.dumps(["no", "yes"])
 
     labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
                                related_name='boolean_choice_questions',
@@ -2020,25 +2163,24 @@ class BooleanChoiceQuestion(FiniteChoiceQuestion):
 
     def force_value_type(self, value, translate=False) -> bool:
         if translate:
-            if not isinstance(value, int):
-                if print_debug: print(f"{self._name}.force_value_type({value} {type(value)}, {translate})")
-                value = int(value)
-            return value == 2
-        if not isinstance(value, bool):
-            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
-            return bool(value)
-        return value
+            data = super()._force_value_type(value, QuestionType.ValueType.INT.value)
+        else:
+            data = super()._force_value_type(value)
+
+        return data == 2 if translate else data
 
     #  This is not very useful but is required to fit the expected interface
     def validate_value(self, data: bool) -> bool:
         if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
-        value = data
+        value = data if isinstance(data, bool) else super()._force_value_type(data)
 
         if not isinstance(value, bool):
-            text = _('Value %(value)s is not a boolean value.') % {'value': f"{value}"}
-            thrown = ValidationError(text)
+            if print_debug:
+                print(f"{self._name}.validate_value: {value} is not bool")
+            thrown = ValidationError(f"Value {value} is not bool")
+            thrown.user_message = _('Value %(value)s is not a boolean value.') % {'value': f"{value}"}
+            thrown.bad_value = value
             raise thrown
-        return True
 
     def default_labels(self):
         return self._default_labels
@@ -2049,6 +2191,9 @@ class ExclusiveChoiceQuestion(FiniteChoiceQuestion):
     _parent = 'FiniteChoiceQuestion'  # internal name
 
     question_group_type = "exclusive_choices"
+    # question_group_type = QuestionGroup.DataType.EXCLUSIVE.name.replace(" ", "_").lower()
+    response_type = QuestionGroup.ResponseType.INT.value
+    value_type = QuestionType.ValueType.INT.value
 
     labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
                                related_name='exclusive_choice_questions',
@@ -2062,6 +2207,33 @@ class ExclusiveChoiceQuestion(FiniteChoiceQuestion):
     ModelHelper.inherit(_parent, _name)
     ModelHelper.register(_name, 'group', 85, to_serialize=False, foreign=QuestionGroup)
     ModelHelper.register(_name, 'labels', 70, text_type='JSON', foreign=StringGroup)
+
+    def force_value_type(self, value, translate=False) -> int:
+        return super()._force_value_type(value)
+
+    def validate_value(self, data: int) -> bool:
+        if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
+        value = data if isinstance(data, int) else super()._force_value_type(data)
+
+        if 1 > value:
+            if print_debug:
+                print(f"{self._name}.validate_value: 1 > {data} -> out of range")
+            thrown = ValidationError(f"Value {value} < minimum 1")
+            thrown.user_message = _('There is no choice #%(value)d.') % \
+                                  {'value': value}
+            thrown.bad_value = value
+            raise thrown
+
+        if value > self.num_possibilities:
+            if print_debug:
+                print(f"{self._name}.validate_value: {data} > {self.num_possibilities} -> out of range")
+            thrown = ValidationError(f"Value {value} > maximum {self.num_possibilities}")
+            thrown.user_message = _('There is no choice #%(value)d.') % \
+                                  {'value': value}
+            thrown.bad_value = value
+            raise thrown
+
+        return True
 
     # def force_value_type(self, value, translate=False) -> int:
     #     if not isinstance(value, int):
@@ -2080,7 +2252,7 @@ class ExclusiveChoiceQuestion(FiniteChoiceQuestion):
     #             if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int so {data} -> {value} {type(value)}")
     #         except ValueError as e:
     #             if print_debug: print(f"{self._name}.validate_value: {type(data)} =/= int -> ValueError {e}")
-    #             text = _('Expected integer, received %(value)s causing %(value_error)s') % {"value": f"{value}", "value_error": e.__str__()}
+    #             text = _('Expected integer, received %(value)s causing %(value_error)s') % {"value": f"{value}", "value_error": e.__class__}
     #             thrown = ValidationError(text)
     #             thrown.__cause__ = e
     #             raise thrown
@@ -2096,7 +2268,9 @@ class MultiChoiceQuestion(FiniteChoiceQuestion):
     _name = 'MultiChoiceQuestion'  # internal name
     _parent = 'FiniteChoiceQuestion'  # internal name
 
-    question_group_type = "multi_choices"
+    question_group_type = QuestionGroup.DataType.CHOICES.name.replace(" ", "_").lower()
+    response_type = QuestionGroup.ResponseType.INT.value
+    value_type = QuestionType.ValueType.BITS.value
 
     min_choices = models.IntegerField(null=False)
     max_choices = models.IntegerField(null=False)
@@ -2125,62 +2299,54 @@ class MultiChoiceQuestion(FiniteChoiceQuestion):
             n >>= 1
         return count
 
-    def force_value_type(self, value, translate=False):
-        if not isinstance(value, int):
-            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
-            return int(value)
-        return value
+    def force_value_type(self, value, translate=False) -> int:
+        return super()._force_value_type(value)
 
     def validate_value(self, data: int) -> bool:
         if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
-        value = data
-        if self.min_choices > 0:
-            return (0 < value < 2 ** self.max_choices) \
-                   and self.count_bits(value) < self.max_choices
+        value = data if isinstance(data, int) else super()._force_value_type(data)
+
+        chosen = self.count_bits(value)
+
+        if not (0 < value < 2 ** self.max_choices):
+            if print_debug:
+                print(f"{self._name}.validate_value: {data} has non existent choices-> out of range")
+            thrown = ValidationError(f"Value {value} means too few choices")
+            thrown.user_message = _('Non-existant choices were chosen.')
+            thrown.bad_value = value
+            raise thrown
+
+        if self.min_choices > value:
+            if print_debug:
+                print(f"{self._name}.validate_value: {self.min_choices} > c({data}) = {chosen} -> out of range")
+            thrown = ValidationError(f"Value {value} means too few choices")
+            thrown.user_message = _('Fewer than %(min)d choices were chosen.') % \
+                                  {'min': self.min_choices}
+            thrown.bad_value = value
+            raise thrown
+
+        if value > self.max_choices:
+            if print_debug:
+                print(f"{self._name}.validate_value: {self.max_choices} < c({data}) = {chosen} -> out of range")
+            thrown = ValidationError(f"Value {value} means too many choices")
+            thrown.user_message = _('More than %(max)d choices were chosen.') % \
+                                  {'max': self.max_choices}
+            thrown.bad_value = value
+            raise thrown
+
+        return True
 
 
-class ContinuousChoiceQuestion(QuestionType):
-    _name = 'ContinuousChoiceQuestion'  # internal name
-    _parent = 'QuestionType'  # internal name
-
-    range = models.FloatField(null=False)
-    initial = models.FloatField(null=False)
-
-    class Meta:
-        abstract = True
-
-    # Used with views and serializers
-    ModelHelper.inherit(_parent, _name)
-    ModelHelper.register(_name, 'range', 75, to_filter=True)
-    ModelHelper.register(_name, 'initial', 75, to_filter=True)
-
-    def force_value_type(self, value, translate=False):
-        if not isinstance(value, float):
-            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
-            return float(value)
-        return value
-
-    def validate_value(self, data: float):
-        if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
-        if not isinstance(data, float):
-            try:
-                value = float(data)
-            except ValueError:
-                text = _('Expected float, received %(value)s') % {"value": f"{value}"}
-                raise ValidationError(text)
-        else:
-            value = data
-        if not (self.min <= data <= self.max):
-            text = _('Value %(value)f is out of range: %(min)f - %(max)f') % {"value": value, "min": self.min, "max": self.max}
-            raise ValidationError(text)
-
-
-class FloatRangeQuestion(ContinuousChoiceQuestion):
+class FloatRangeQuestion(QuestionType):
     _name = 'FloatRangeQuestion'  # internal name
     _parent = 'FiniteChoiceQuestion'  # internal name
 
-    question_group_type = "decimal_range"
+    question_group_type = QuestionGroup.DataType.FLOAT_RANGE.name.replace(" ", "_").lower()
+    response_type = QuestionGroup.ResponseType.FLOAT.value
+    value_type = QuestionType.ValueType.FLOAT.value
 
+    range = models.FloatField(null=False)
+    initial = models.FloatField(null=False)
     min = models.FloatField(null=False)
     max = models.FloatField(null=False)
 
@@ -2196,28 +2362,37 @@ class FloatRangeQuestion(ContinuousChoiceQuestion):
     ModelHelper.inherit(_parent, _name)
     ModelHelper.register(_name, 'group', 85, to_serialize=False, foreign=QuestionGroup)
     ModelHelper.register(_name, 'labels', 70, text_type='JSON', foreign=StringGroup)
+    ModelHelper.register(_name, 'range', 75, to_filter=True)
+    ModelHelper.register(_name, 'initial', 75, to_filter=True)
     ModelHelper.register(_name, 'min', 75, to_filter=True)
     ModelHelper.register(_name, 'max', 75, to_filter=True)
 
-    def force_value_type(self, value, translate=False):
-        if not isinstance(value, float):
-            if print_debug: print(f"{self._name}.force_value_type({value} {type(value)})")
-            return float(value)
-        return value
+    def force_value_type(self, value, translate=False) -> int:
+        return super()._force_value_type(value)
 
-    def validate_value(self, data: float):
+    def validate_value(self, data: float) -> bool:
         if print_debug: print(f"{self._name}.validate_value({data} {type(data)})")
-        if not isinstance(data, float):
-            try:
-                value = float(data)
-            except ValueError:
-                text = _('Expected float, received %(value)s') % {"value": f"{value}"}
-                raise ValidationError(text)
-        else:
-            value = data
-        if not (self.min <= data <= self.max):
-            text = _('Value %(value)f is out of range: %(min)f - %(max)f') % {"value": value, "min": self.min, "max": self.max}
-            raise ValidationError(text)
+        value = data if isinstance(data, float) else super()._force_value_type(data)
+
+        if self.min > value:
+            if print_debug:
+                print(f"{self._name}.validate_value: {self.min} > {data} -> out of range")
+            thrown = ValidationError(f"Value {value} < minimum {self.min}")
+            thrown.user_message = _('Entered value %(value)d is too small. minimum: %(min)d') % \
+                                  {'value': value, 'min': self.min}
+            thrown.bad_value = value
+            raise thrown
+
+        if value > self.max:
+            if print_debug:
+                print(f"{self._name}.validate_value: {data} > {self.max} -> out of range")
+            thrown = ValidationError(f"Value {value} > maximum {self.max}")
+            thrown.user_message = _('Entered value %(value)d is too big. maximum: %(max)d') % \
+                                  {'value': value, 'max': self.max}
+            thrown.bad_value = value
+            raise thrown
+
+        return True
 
 
 class Submission(ModelBase):

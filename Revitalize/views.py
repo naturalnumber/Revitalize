@@ -35,14 +35,21 @@ def _ex(e: BaseException, data: dict):
     if e is None or data is None:
         return
 
-    data['exception'] = e.__str__()
+    #data['exception'] = e.
     data['type'] = e.__class__.__name__
 
     #if hasattr(e, '__traceback__') and e.__traceback__ is not None:
     #    data['trace'] = e.__traceback__.
 
+    if hasattr(e, 'user_message') and e.user_message is not None:
+        data['user_message'] = e.user_message
+
+    if hasattr(e, 'value') and e.value is not None:
+        data['bad_value'] = e.value
+
     if hasattr(e, '__cause__') and e.__cause__ is not None:
-        data['cause'] = e.__cause__.__str__()
+        c: BaseException = e.__cause__
+        data['cause'] = c.__class__.__name__
 
     if hasattr(e, 'detail'):
         data['detail'] = e.detail

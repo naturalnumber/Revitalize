@@ -1011,6 +1011,13 @@ empty_string = _s("")
 empty_text = _t("")
 empty_string_group = _g("{}")
 
+Revitalize.models.Indicator.objects.create(name=_s("Height"),
+                                                 type=Revitalize.models.Indicator.DataType.FLOAT.value)
+Revitalize.models.Indicator.objects.create(name=_s("Weight"),
+                                                 type=Revitalize.models.Indicator.DataType.FLOAT.value)
+Revitalize.models.Indicator.objects.create(name=_s("BMI"),
+                                                 type=Revitalize.models.Indicator.DataType.FLOAT.value)
+
 ind = Revitalize.models.Indicator.objects.create(name=_s("SEMCD6 Score"),
                                                  type=Revitalize.models.Indicator.DataType.FLOAT.value)
 semcd6["analysis"]['outputs'][0]["id"] = ind.id
