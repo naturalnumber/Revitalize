@@ -391,7 +391,8 @@ class Profile(ModelBase):
 
     points = models.BigIntegerField(null=False, verbose_name="Health Currency", default=0)  # Int or Decimal?
     personal_message = models.CharField(max_length=280, blank=True, null=False)
-    profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True)
+
+    profile_picture = models.ImageField(upload_to="profile_pictures_gallery", blank=True)
 
     password_flag = models.BooleanField(null=False, verbose_name="Password Reset Flag",
                                         help_text="True if the password needs to be reset.", default=True)
