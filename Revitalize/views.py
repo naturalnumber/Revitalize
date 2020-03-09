@@ -481,3 +481,8 @@ class ProfileRetrievalViewSet(viewsets.ModelViewSet):
 class UserIndicatorViewSet(viewsets.ModelViewSet):
     queryset = Indicator.objects.all()
     serializer_class = UserIndicatorSerializer
+
+class LabValueViewSet(viewsets.ModelViewSet):
+    _model = FloatDataPoint
+    serializer_class = FloatDataPointSerializer
+    queryset = _model.objects.all()

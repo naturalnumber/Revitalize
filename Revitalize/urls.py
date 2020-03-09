@@ -37,6 +37,8 @@ router.register('indicators', IndicatorViewSet)
 router.register('data_points_int', IntDataPointViewSet)
 router.register('data_points_float', FloatDataPointViewSet)
 
+router.register('lab_values', LabValueViewSet, basename='lab_value')
+
 # For debugging
 # router.register('surveys_d', SurveyViewSetAll)
 # router.register('surveys_0', SurveyViewSet)
