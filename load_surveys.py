@@ -177,7 +177,7 @@ semcd6 = {
                 "outputs": [
                         {
                                 "type": "Indicator",
-                                "calculation": "(q2_1 + q3_1 + q4_1 + q5_1 + q6_1 + q7_1)/6"
+                                "calculation": "(q1 + q2 + q3 + q4 + q5 + q6)/6"
                         }
                 ]
         }

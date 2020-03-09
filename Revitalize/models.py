@@ -3,6 +3,7 @@ from json import JSONDecodeError
 
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models.query import QuerySet
 from django.utils.translation import gettext as _ # TODO gettext_lazy
 from rest_framework.exceptions import ValidationError
 from rest_framework.utils import json
@@ -12,11 +13,11 @@ from Revitalize.data_analysis_system import DataAnalysisSystem
 #def _(s): # TODO
 #    return s
 
-print_debug = True
+print_debug = False
 
-print_debug_a = False
+print_debug_a = True
 
-print_test_data = False
+print_test_data = True
 
 
 def validate_json(j: str):
@@ -250,6 +251,40 @@ class ModelBase(models.Model):
     ModelHelper.register(_name, 'creation_time', 5, to_filter=True, to_serialize=False)
     ModelHelper.register(_name, 'update_time', 5, to_filter=True, to_serialize=False)
 
+    def _verify_key(self, data: dict, key: str, name: str = None, n: int = None, nonfatal: bool = None) -> bool:
+        # self is context for error message
+        if key not in data.keys():
+            if nonfatal is None:
+                if hasattr(self, 'optional'):
+                    nonfatal = self.optional
+                else:
+                    nonfatal = False
+
+            if nonfatal:
+                return False
+
+            if n is None:
+                if hasattr(self, 'number'):
+                    n = self.number
+                else:
+                    n = None
+
+            if name is None:
+                name = self._name
+
+            if n is not None:
+                text = _('Unable to find "%(key)s" in data for %(name)s #%(n)d: %(me)s') % \
+                       {'key': key, 'n': n, 'me': self.__str__(), 'name': name}
+            else:
+                text = _('Unable to find "%(key)s" in data for %(name)s: %(me)s') % \
+                       {'key': key, 'me': self.__str__(), 'name': name}
+
+            thrown = KeyError(text)
+            thrown.detail = text
+            if print_debug: print(f"\t_verify_key: {text}")
+            raise thrown
+        return True
+
 
 class Address(ModelBase):
     _name = 'Address'  # internal name
@@ -473,11 +508,11 @@ class Processable(Nameable):
             raise ValidationError("Calculations may not contain __")
 
     def analyse(self, user: User, time: datetime, data: dict, source: 'Submission', testing=False):
-        if print_debug_a: print(f"analyse({user}, {time},\n{data},\n{source}, {testing})")
+        if print_debug_a: print(f"{self.__class__}.analyse({user}, {time},\n{data},\n{source}, {testing})")
 
         analysis: dict = json.loads(self.analysis)
 
-        if print_debug_a: print(f"analyse: {analysis}")
+        if print_debug_a: print(f"\tanalyse: {analysis}")
 
         points = []  # Possibly needed for recursion
         debug = []
@@ -485,57 +520,72 @@ class Processable(Nameable):
         if 'outputs' in analysis.keys():
             for out in analysis['outputs']:
                 if not isinstance(out, dict):
+                    if print_debug_a: print(f"\tanalyse: out not a dict {out}")
                     debug.append(('outputs', out, 'Not a dictionary'))
                     continue
 
                 out: dict
 
+                if print_debug_a: print(f"analyse: out {out}")
+
                 if 'type' not in out.keys():
+                    if print_debug_a: print(f"\tanalyse: out unknown type {out}")
                     debug.append(('outputs', out, 'Unknown type'))
                     continue
 
                 if out['type'] == Indicator._name:
 
                     if 'calculation' not in out.keys():
+                        if print_debug_a: print(f"\tanalyse: out has no calculation {out}")
                         debug.append(('outputs', out, 'No calculation provided'))
                         continue
 
                     calculation: str = out['calculation']
 
+                    if print_debug_a: print(f"\tanalyse: calculation {calculation}")
+
                     if calculation is None or not isinstance(calculation, str):
+                        if print_debug_a: print(f"\tanalyse: out calculation is not a string {type(calculation)}")
                         debug.append(('outputs', out, "Invalid calculation", calculation))
                         continue
 
                     # This is here to prevent certain types of injections that should never be possible
                     if calculation.find('__') >= 0:
+                        if print_debug_a: print(f"\tanalyse: calculation insecure {calculation}")
                         debug.append(('outputs', out, "Calculations may not contain __", calculation))
                         continue
 
                     if 'id' not in out.keys():
+                        if print_debug_a: print(f"\tanalyse: out has no id {out}")
                         debug.append(('outputs', out, 'No indicator id'))
                         continue
 
                     ind_id = out['id']
 
+                    if print_debug_a: print(f"\tanalyse: id {ind_id}")
+
                     try:
                         indicator = Indicator.objects.get(id=ind_id)
                         if indicator is None:
+                            if print_debug_a: print(f"\tanalyse: id invalid {ind_id}")
                             debug.append(('output_indicators', ind_id, 'Indicator not found'))
                             continue
 
                         # May need dynamic data addition here...
 
-                        if print_debug_a: print(f"analyse: attempting {data} -> {indicator}")
+                        if print_debug_a: print(f"\tanalyse: attempting {data} -> {indicator}")
 
                         value = DataAnalysisSystem.process(calculation, data)
 
-                        if print_debug_a: print(f"analyse: {indicator} <- {value}")
+                        if print_debug_a: print(f"\tanalyse: attempting {indicator} <- {value}")
 
                         if value is None:
+                            if print_debug_a: print(f"\tanalyse: no value")
                             debug.append(('output_indicators', ind_id, 'No value'))
                             continue
 
                         if not isinstance(value, int) and not isinstance(value, float):
+                            if print_debug_a: print(f"\tanalyse: invalid value type {type(value)}")
                             debug.append(('output_indicators', ind_id, "Invalid value type", value))
                             continue
 
@@ -547,7 +597,7 @@ class Processable(Nameable):
 
                         valid = indicator.validate(value)
 
-                        if print_debug_a: print(f"analyse: {value} is valid? {valid}")
+                        if print_debug_a: print(f"\tanalyse: {value} is valid? {valid}")
 
                         if not valid:
                             debug.append(('output_indicators', ind_id, "Value failed to validate", value))
@@ -555,42 +605,47 @@ class Processable(Nameable):
 
                         point = None
 
-                        if testing:
-                            time = datetime.today()
-                            user = User.objects.get(id=1)
+                        # if testing:
+                        #     time = datetime.today()
+                        #     user = User.objects.get(id=1)
 
                         p_name = f"{indicator.name} value for {user} at {time}"
+
+                        # TODO
+                        p_name_s = String.objects.create(value=p_name)
 
                         if indicator.is_int():
                             point = IntDataPoint.objects.create(indicator=indicator, time=time, value=value,
                                                                 validated=True, processed=False,
-                                                                user=user, source=source, name=p_name)
+                                                                user=user, source=source, name=p_name_s)
                         elif indicator.is_float():
                             point = FloatDataPoint.objects.create(indicator=indicator, time=time, value=value,
                                                                   validated=True, processed=False,
-                                                                  user=user, source=source, name=p_name)
+                                                                  user=user, source=source, name=p_name_s)
 
                         if point is None:
+                            if print_debug_a: print(f"\tanalyse: failed to create point {p_name}")
                             debug.append(('output_indicators', ind_id, "Failed to create point", value))
                             continue
 
-                        if print_debug_a: print(f"analyse: {value} -> {point}")
+                        if print_debug_a: print(f"\tanalyse: {value} -> {point}")
                         points.append(point)
 
                     except Exception as e:
+                        if print_debug_a: print(f"\tanalyse: unexpected error {e}")
                         debug.append(('outputs', ind_id, e))
                 else:
-                    if print_debug_a: print(f"{out['type']} =/= {Indicator._name}")
+                    if print_debug_a: print(f"\tanalyse: {out['type']} =/= {Indicator._name}")
         else:
-            if print_debug_a: print(f"analyse: no outputs")
+            if print_debug_a: print(f"\tanalyse: no outputs")
 
         if len(debug) > 0:
             if source.notes is None:
                 source.notes = ""
-            if len(source.notes) > 0:
+            elif len(source.notes) > 0:
                 source.notes += "\n\n\n"
             source.notes += f"analysis at {datetime.utcnow()} had the following debug output: {debug}"
-            if print_debug_a: print(f"analysis at {datetime.utcnow()} had the following debug output: {debug}")
+            if print_debug_a: print(f"\tanalysis at {datetime.utcnow()} had the following debug output: {debug}")
 
         for p in points:
             p.analyse(user, time, data, source)
@@ -663,7 +718,123 @@ class Form(Displayable):
         elif self.is_lab():
             lab = MedicalLab.objects.create(form=self.pk)
 
+    def _fetch_group(self, questions: QuerySet, e: dict, n: int) -> 'QuestionGroup':
+        group: QuestionGroup = None
+        bad_id = None
+
+        if "id" in e.keys():
+            group = questions.get(id=e["id"])
+            if print_debug: print(f"\t_fetch_group-#{n} question({e['id']}): {group}")
+
+            if group is None:
+                bad_id = e["id"]
+
+        if group is None:
+            group = questions[n]
+
+        if group is None:
+            if bad_id is not None:
+                text = _('Unable to find question group #%(n)d with id %(bad_id)d') % {"n": n, "bad_id": bad_id}
+                thrown = LookupError(text)
+                thrown.detail = text
+                if print_debug: print(f"\t_fetch_group-#{n}... {text}")
+                raise thrown
+            text = _('Unable to find question group #%(n)d') % {"n": n}
+            thrown = LookupError(text)
+            thrown.detail = text
+            if print_debug: print(f"\t_fetch_group-#{n}... {text}")
+            raise thrown
+
+        return group
+
+    def _recurse(self, data: dict, submission: 'Submission', *args, translation: dict = None,
+                 question_method: str = None, delegator: str = None, **kwargs):
+        if print_debug:
+            if delegator is None:
+                delegator = ""
+                print(f"{self.__class__.__name__}.recurse( ... ) for {self}")
+            else:
+                delegator += '.'
+                print(f"{self.__class__.__name__}.{delegator}recurse( ... ) for {self}")
+
+        self._verify_key(data, 'elements', 'submission', self.id)
+
+        groups = self.question_groups.order_by('number').all()
+
+        if print_debug: print(f"\t{delegator}recurse groups: {groups}")
+
+        errors = []
+        errors_e = []
+        errors_n = []
+
+        n = 0
+        m = 0
+
+        for e in data["elements"]:
+            n += 1
+            if not isinstance(e, dict):  # TODO
+                raise TypeError(f"Entry #{n}: {e} in data for {self} is not the correct type." +
+                                f" {type(e) if e is not None else None}")
+
+            e: dict
+
+            if print_debug: print(f"\trespond-#{n} e: {e}")
+
+            self._verify_key(e, 'element_type', 'element', n)
+
+            if e["element_type"] == QuestionGroup.element_type:
+                m += 1
+
+                if print_debug: print(f"\t{delegator}recurse-#{n} {e['element_type']} == {QuestionGroup.element_type}")
+
+                try:
+                    group = self._fetch_group(groups, e, m)
+                except LookupError as er:
+                    errors.append(er)
+                    errors_n.append(n)
+                    errors_e.append(e)
+                    if print_debug: print(f"\t{delegator}recurse-#{n} errors.append({e}) -> continue")
+                    continue
+
+                if print_debug: print(f"\t{delegator}recurse-#{n} group {group}")
+
+                if question_method is not None:
+                    try:
+                        if print_debug: print(f"\t{delegator}recurse on group: {group}")
+
+                        getattr(group, question_method)(data, submission, e, m, translation, *args, **kwargs)
+
+                        if print_debug: print(f"\t{delegator}recursed on group: {group}")
+
+                    except ValidationError as er:
+                        errors.append(er)
+                        errors_n.append(n)
+                        errors_e.append(e)
+                        continue
+
+            elif print_debug: print(f"\t{delegator}recurse-#{n} {e['element_type']} =/= {QuestionGroup.element_type}")
+
+        if len(errors) > 0:
+            thrown = ValidationError(errors)
+            thrown.rev_error_list = errors
+            thrown.rev_error_nums = errors_n
+            thrown.rev_error_elements = errors_e
+            raise thrown
+
+        if print_debug: print(f"/{delegator}recurse")
+
+        if print_debug_a: print(f"Final variables: {translation}")
+
+        return translation if translation is not None else True
+
     def r_validate(self, data: dict, submission: 'Submission') -> bool:
+        return self._recurse(data=data, submission=submission)
+
+    def respond(self, data: dict, submission: 'Submission') -> dict:
+        return self._recurse(data=data, submission=submission, translation= {'responses' : {'all' : {}}},
+                             question_method='respond')
+
+    def r_validate_(self, data: dict, submission: 'Submission') -> bool:
         if print_debug: print(f"{self.__class__.__name__}.r_validate( ... ) for {self}")
 
         if "elements" not in data.keys():
@@ -715,7 +886,7 @@ class Form(Displayable):
                 if print_debug: print(f"\tr_validate-#{n} group {group}")
 
                 try:
-                    group.r_validate(data, submission, e)
+                    group.recursive_validate(data, submission, e)
                 except (ValidationError, KeyError, LookupError) as er:
                     errors.append(er)
                     errors_n.append(n)
@@ -734,14 +905,12 @@ class Form(Displayable):
         if print_debug: print(f"/r_validate")
         return True
 
-    def respond(self, data: dict, submission: 'Submission'):
-        #if print_debug: print(f"respond({data}, {submission})")
+    def respond_(self, data: dict, submission: 'Submission'):
         if print_debug: print(f"{self.__class__.__name__}.respond( ... ) for {self}")
 
-        translation = {'questions' : {'all' : {}}}
+        self._verify_key(data, 'elements', 'submission', self.id)
 
-        if "elements" not in data.keys():
-            raise KeyError(f"Key 'questions' for {self} not present")
+        translation = {'questions' : {'all' : {}}}
 
         groups = self.question_groups.order_by('number').all()
 
@@ -752,44 +921,38 @@ class Form(Displayable):
         errors_n = []
 
         n = 0
+        m = 0
 
         for e in data["elements"]:
             n += 1
-            if not isinstance(e, dict):
-                raise TypeError(f"Entry #{n}: {e} in data for {self} is not the correct type. {type(e) if e is not None else None}")
+            if not isinstance(e, dict):  # TODO
+                raise TypeError(f"Entry #{n}: {e} in data for {self} is not the correct type." +
+                                f" {type(e) if e is not None else None}")
 
             e: dict
 
             if print_debug: print(f"\trespond-#{n} e: {e}")
 
-            if "element_type" not in e.keys():
-                raise KeyError(f"Key 'element_type' for {e} not present")
-
-            group: QuestionGroup = None
-            bad_id = None
+            self._verify_key(e, 'element_type', 'element', n)
 
             if e["element_type"] == QuestionGroup.element_type:
+                m += 1
 
                 if print_debug: print(f"\trespond-#{n} {e['element_type']} == {QuestionGroup.element_type}")
 
-                if "id" in e.keys():
-                    group = groups.get(id=e["id"])
-
-                    if group is None:
-                        bad_id = e["id"]
-
-                if group is None:
-                    group = groups[n]
-
-                if group is None:
-                    if bad_id is not None:
-                        raise LookupError(f"Unable to find question group #{n} with id {bad_id}")
-                    raise LookupError(f"Unable to find question group #{n}")
+                try:
+                    group = self._fetch_group(groups, e, m)
+                except LookupError as ex:
+                    errors.append(ex)
+                    errors_n.append(n)
+                    errors_e.append(e)
+                    if print_debug: print(f"\trespond-#{n} errors.append({e}) -> continue")
+                    continue
 
                 if print_debug: print(f"\trespond-#{n} group {group}")
 
                 try:
-                    group.respond(data, submission, e, translation)
+                    group.respond(data, submission, e, m, translation)
                 except ValidationError as er:
                     errors.append(er)
                     errors_n.append(n)
@@ -1042,13 +1205,91 @@ class QuestionGroup(FormElement):
 
         return self.internal_name
 
-    def r_validate(self, submission_data: dict, submission: 'Submission', data: dict) -> bool:
-        if print_debug: print(f"{self.__class__.__name__}.r_validate( ... ) for {self}")
+    def _fetch_questions(self, m: int = None) -> QuerySet:
+        try:
+            questions = self.questions.order_by('number').all()
+        except Exception as e:
+            if m is None:
+                m = self.number
 
-        if "questions" not in data.keys():
-            raise KeyError(f"Key 'questions' for {self} not present")
+            text = _('Unable to query database for questions for question group #%(m)d: %(group)s') % \
+                   {'m': m, 'group': self.__str__()}
+            thrown = LookupError(text)
+            thrown.detail = text
+            thrown.__cause__ = e
+            if print_debug: print(f"\t_fetch_questions: {text}")
+            raise thrown
 
-        questions = self.questions.order_by('number').all()
+        return questions
+
+    def _fetch_question(self, questions: QuerySet, q: dict, n: int) -> 'Question':
+        question: Question = None
+        bad_id = None
+
+        if "id" in q.keys():
+            question = questions.get(id=q["id"])
+            if print_debug: print(f"\t_fetch_question-#{n} question({q['id']}): {question}")
+
+            if question is None:
+                bad_id = q["id"]
+
+        if question is None:
+            question = questions[n]
+
+        if question is None:
+            if bad_id is not None:
+                text = _('Unable to find question #%(n)d with id %(bad_id)d') % {"n": n, "bad_id": bad_id}
+                thrown = LookupError(text)
+                thrown.detail = text
+                if print_debug: print(f"\t_fetch_question-#{n}... {text}")
+                raise thrown
+            text = _('Unable to find question #%(n)d') % {"n": n}
+            thrown = LookupError(text)
+            thrown.detail = text
+            if print_debug: print(f"\t_fetch_question-#{n}... {text}")
+            raise thrown
+
+        return question
+
+    def _fetch_value(self, response, q: dict, n: int):
+        if QuestionGroup._validated_response_key in q.keys():
+            value = q[QuestionGroup._validated_response_key]
+
+            if print_debug: print(f"\t_fetch_value-#{n} value: stored {value}")
+        else:
+            value = self.data().force_value_type(response, translate=True)
+            self.data().validate_value(value)
+
+            if print_debug: print(f"\t_fetch_value-#{n} value: valid")
+
+            q[QuestionGroup._validated_response_key] = value
+
+        return value
+
+    def _recurse(self, submission_data: dict, submission: 'Submission', data: dict, *args,
+                 group_number: int = None, question_method: str = None, delegator: str = None, **kwargs) -> bool:
+        if print_debug:
+            if delegator is None:
+                delegator = ""
+                print(f"{self.__class__.__name__}.recurse( ... ) for {self}")
+            else:
+                delegator += '.'
+                print(f"{self.__class__.__name__}.{delegator}recurse( ... ) for {self}")
+
+        if group_number is None:
+            group_number = self.number
+
+        self._verify_key(data, 'questions', 'question group', group_number)
+
+        questions = self._fetch_questions(group_number)
+
+        if 'values' in kwargs.keys():
+            values: dict = kwargs['values']
+            if 'responses' in values.keys():
+                r: dict = values['responses']
+                group_values = {}
+                r[self.var_name(group_number)] = group_values
+                kwargs['group_values'] = group_values
 
         errors = []
         errors_n = []
@@ -1056,7 +1297,116 @@ class QuestionGroup(FormElement):
 
         n = 0
 
-        for q in data["questions"]:
+        n_max = len(data['questions'])
+
+        for q in data['questions']:
+            n += 1
+            if q is None or not isinstance(q, dict):  # TODO
+                raise TypeError(f"Entry #{n}: {q} in data for {self} is not the correct type." +
+                                f" {type(q) if q is not None else None}")
+
+            q: dict
+
+            if print_debug: print(f"\t{delegator}recurse-#{n} q: {q}")
+
+            try:
+                question = self._fetch_question(questions, q, n)
+            except LookupError as e:
+                errors.append(e)
+                errors_n.append(n)
+                errors_q.append(q)
+                if print_debug: print(f"\t{delegator}recurse-#{n} errors.append({e}) -> continue")
+                continue
+
+            try:
+                if not question._verify_key(q, 'response', 'question', n, question.optional):
+                    continue
+            except KeyError as e:
+                errors.append(e)
+                errors_n.append(n)
+                errors_q.append(q)
+                if print_debug:
+                    print(f"\t{delegator}recurse-#{n} {e.detail if hasattr(e, 'detail') else 'details missing'}" +
+                          f"; errors.append({e}) -> continue")
+                continue
+
+            response = q["response"]
+
+            if print_debug: print(f"\t{delegator}recurse-#{n} response: {response}")
+
+            try:
+                value = self._fetch_value(response, q, n)
+
+            except (ValidationError, TypeError, ValueError) as e:
+                errors.append(e)
+                errors_n.append(n)
+                errors_q.append(n)
+                if print_debug: print(f"\t{delegator}recurse-#{n} errors.append({e}) -> continue")
+                continue
+
+            if question_method is not None:
+                try:
+                    if print_debug: print(f"\t{delegator}recurse on question: {question}")
+
+                    getattr(question, question_method)(submission_data, submission, value, group_number, n_max,
+                                                       *args, **kwargs)
+
+                    if print_debug: print(f"\t{delegator}recursed on question: {question}")
+
+                except (ValidationError, ValueError, TypeError) as e:
+                    errors.append(e)
+                    errors_n.append(n)
+                    errors_q.append(q)
+                    if print_debug: print(f"\t{delegator}recurse-#{n} errors.append({e}) -> continue")
+                    continue
+                except RuntimeError as e:
+                    print(f"Runtime error during recursion on question {question} method {question_method} in group" +
+                          f" {self} from submission {submission} with data {submission_data} ({e})")
+                    text = _('Unknown runtime error occurred')
+                    errors.append(ValidationError(text))
+                    errors_n.append(n)
+                    errors_q.append(q)
+                    if print_debug: print(f"\t{delegator}recurse-#{n} Runtime Error {e}) -> continue")
+                    continue
+
+        if len(errors) > 0:
+            thrown = ValidationError(errors)
+            thrown.rev_error_list = errors
+            thrown.rev_error_nums = errors_n
+            thrown.rev_error_questions = errors_q
+            if print_debug: print(f"\t{delegator}recurse #errors = {len(errors)} {errors}")
+            raise thrown
+
+        if print_debug: print(f"/{delegator}recurse")
+        return True
+
+    def recursive_validate(self, submission_data: dict, submission: 'Submission', data: dict,
+                           group_number: int = None) -> bool:
+        return self._recurse(submission_data=submission_data, submission=submission, data=data,
+                             group_number=group_number, delegator='r_validate')
+
+    def respond(self, submission_data: dict, submission: 'Submission', data: dict,
+                group_number: int = None, values: dict=None) -> bool:
+        return self._recurse(submission_data=submission_data, submission=submission, data=data,
+                             group_number=group_number, values=values, question_method='respond', delegator='respond')
+
+    def r_validate_(self, submission_data: dict, submission: 'Submission', data: dict, group_number: int = None) -> bool:
+        if print_debug: print(f"{self.__class__.__name__}.r_validate( ... ) for {self}")
+
+        if group_number is None:
+            group_number = self.number
+
+        self._verify_key(data, 'questions', 'question group', group_number)
+
+        questions = self._fetch_questions(group_number)
+
+        errors = []
+        errors_n = []
+        errors_q = []
+
+        n = 0
+
+        for q in data['questions']:
             n += 1
             if q is None or not isinstance(q, dict):
                 raise TypeError(f"Entry #{n}: {q} in data for {self} is not the correct type. {type(q) if q is not None else None}")
@@ -1065,33 +1415,8 @@ class QuestionGroup(FormElement):
 
             if print_debug: print(f"\tr_validate-#{n} q: {q}")
 
-            question: Question = None
-            bad_id = None
-
             try:
-                if "id" in q.keys():
-                    question = questions.get(id=q["id"])
-                    if print_debug: print(f"\tr_validate-#{n} question({q['id']}): {question}")
-
-                    if question is None:
-                        bad_id = q["id"]
-
-                if question is None:
-                    question = questions[n]
-                    if print_debug: print(f"\tr_validate-#{n} question(\\bad_id\\): questions[{n}]: {question}")
-
-                if question is None:
-                    if bad_id is not None:
-                        text = _('Unable to find question #%(n)d with id %(bad_id)d') % {"n": n, "bad_id": bad_id}
-                        thrown = LookupError(text)
-                        thrown.detail = text
-                        if print_debug: print(f"\tr_validate-#{n}... {text}")
-                        raise thrown
-                    text = _('Unable to find question #%(n)d') % {"n": n}
-                    thrown = LookupError(text)
-                    thrown.detail = text
-                    if print_debug: print(f"\tr_validate-#{n}... {text}")
-                    raise thrown
+                question = self._fetch_question(questions, q, n)
             except LookupError as e:
                 errors.append(e)
                 errors_n.append(n)
@@ -1099,16 +1424,16 @@ class QuestionGroup(FormElement):
                 if print_debug: print(f"\tr_validate-#{n} errors.append({e}) -> continue")
                 continue
 
-            if "response" not in q.keys():
-                if question.optional:
-                    continue #TODO
-                text = _('Key "response" for question #%(n)d not present') % {"n": n, "bad_id": bad_id}
-                thrown = KeyError(text)
-                thrown.detail = text
-                errors.append(thrown)
+            try:
+                if not question._verify_key(q, 'response', 'question', n, question.optional):
+                    continue
+            except KeyError as e:
+                errors.append(e)
                 errors_n.append(n)
                 errors_q.append(q)
-                if print_debug: print(f"\tr_validate-#{n} {text}; errors.append({thrown}) -> continue")
+                if print_debug:
+                    print(f"\tr_validate-#{n} {e.detail if hasattr(e, 'detail') else 'details missing'}" +
+                          f"; errors.append({e}) -> continue")
                 continue
 
             response = q["response"]
@@ -1116,17 +1441,12 @@ class QuestionGroup(FormElement):
             if print_debug: print(f"\tr_validate-#{n} response: {response}")
 
             try:
-                value = self.data().force_value_type(response, translate=True)
-                self.data().validate_value(value)
+                value = self._fetch_value(response, q, n)
 
-                if print_debug: print(f"\tr_validate-#{n} value: valid")
-
-                q[QuestionGroup._validated_response_key] = value
-
-            except ValidationError as e:
+            except (ValidationError, TypeError, ValueError) as e:
                 errors.append(e)
                 errors_n.append(n)
-                errors_q.append(q)
+                errors_q.append(n)
                 if print_debug: print(f"\tr_validate-#{n} errors.append({e}) -> continue")
                 continue
 
@@ -1141,12 +1461,11 @@ class QuestionGroup(FormElement):
         if print_debug: print(f"/r_validate")
         return True
 
-    def respond(self, submission_data: dict, submission: 'Submission', data: dict, values: dict=None, m: int = None):
-        # print(f"respond({submission_data},\n{submission},\n{data})")
+    def respond_(self, submission_data: dict, submission: 'Submission', data: dict, values: dict=None, group_number: int = None):
         if print_debug: print(f"{self.__class__.__name__}.respond( ... ) for {self}")
 
-        if m is None:
-            m = self.number
+        if group_number is None:
+            group_number = self.number
 
         group_values = None
 
@@ -1154,12 +1473,11 @@ class QuestionGroup(FormElement):
             if 'responses' in values.keys():
                 r: dict = values['responses']
                 group_values = {}
-                r[self.var_name(m)] = group_values
+                r[self.var_name(group_number)] = group_values
 
-        if "questions" not in data.keys():
-            raise KeyError(f"Key 'questions' for {self} not present")
+        self._verify_key(data, 'questions', 'question group', group_number)
 
-        questions = self.questions.order_by('number').all()
+        questions = self._fetch_questions(group_number)
 
         errors = []
         errors_n = []
@@ -1167,9 +1485,9 @@ class QuestionGroup(FormElement):
 
         n = 0
 
-        n_max = len(data["questions"])
+        n_max = len(data['questions'])
 
-        for q in data["questions"]:
+        for q in data['questions']:
             n += 1
             if q is None or not isinstance(q, dict):
                 raise TypeError(f"Entry #{n}: {q} in data for {self} is not the correct type. {type(q) if q is not None else None}")
@@ -1178,31 +1496,8 @@ class QuestionGroup(FormElement):
 
             if print_debug: print(f"\trespond-#{n} q: {q}")
 
-            question: Question = None
-            bad_id = None
-
             try:
-                if "id" in q.keys():
-                    question = questions.get(id=q["id"])
-
-                    if question is None:
-                        bad_id = q["id"]
-
-                if question is None:
-                    question = questions[n]
-
-                if question is None:
-                    if bad_id is not None:
-                        text = _('Unable to find question #%(n)d with id %(bad_id)d') % {"n": n, "bad_id": bad_id}
-                        thrown = LookupError(text)
-                        thrown.detail = text
-                        if print_debug: print(f"\trespond-#{n}... {text}")
-                        raise thrown
-                    text = _('Unable to find question #%(n)d') % {"n": n}
-                    thrown = LookupError(text)
-                    thrown.detail = text
-                    if print_debug: print(f"\trespond-#{n}... {text}")
-                    raise thrown
+                question = self._fetch_question(questions, q, n)
             except LookupError as e:
                 errors.append(e)
                 errors_n.append(n)
@@ -1210,48 +1505,36 @@ class QuestionGroup(FormElement):
                 if print_debug: print(f"\trespond-#{n} errors.append({e}) -> continue")
                 continue
 
-            if "response" not in q.keys():
-                if question.optional:
-                    continue #TODO
-                text = _('Key "response" for question #%(n)d not present') % {"n": n, "bad_id": bad_id}
-                thrown = KeyError(text)
-                thrown.detail = text
-                errors.append(thrown)
+            try:
+                if not question._verify_key(q, 'response', 'question', n, question.optional):
+                    continue
+            except KeyError as e:
+                errors.append(e)
                 errors_n.append(n)
                 errors_q.append(q)
-                if print_debug: print(f"\trespond-#{n} {text}; errors.append({thrown}) -> continue")
+                if print_debug:
+                    print(f"\trespond-#{n} {e.detail if hasattr(e, 'detail') else 'details missing'}" +
+                          f"; errors.append({e}) -> continue")
                 continue
 
             response = q["response"]
 
-            if print_debug: print(f"\trespond-#{n} value: {response}")
+            if print_debug: print(f"\trespond-#{n} response: {response}")
 
-            value = None
+            try:
+                value = self._fetch_value(response, q, n)
 
-            if QuestionGroup._validated_response_key in q.keys():
-                value = q[QuestionGroup._validated_response_key]
-
-                if print_debug: print(f"\trespond-#{n} value: stored {value}")
-            else:
-                try:
-                    value = self.data().force_value_type(response, translate=True)
-                    self.data().validate_value(value)
-
-                    if print_debug: print(f"\trespond-#{n} value: valid")
-
-                    q[QuestionGroup._validated_response_key] = value
-
-                except (ValidationError, TypeError, ValueError) as e:
-                    errors.append(e)
-                    errors_n.append(n)
-                    errors_q.append(n)
-                    if print_debug: print(f"\trespond-#{n} errors.append({e}) -> continue")
-                    continue
+            except (ValidationError, TypeError, ValueError) as e:
+                errors.append(e)
+                errors_n.append(n)
+                errors_q.append(n)
+                if print_debug: print(f"\trespond-#{n} errors.append({e}) -> continue")
+                continue
 
             try:
                 if print_debug: print(f"\trespond question: {question}")
 
-                question.respond(submission, value, values, group_values, m, n_max)
+                question.respond(submission_data, submission, value, group_number, n_max, values, group_values)
 
                 if print_debug: print(f"\tresponded question: {question}")
 
@@ -1356,31 +1639,35 @@ class Question(Displayable):
 
         return self.internal_name
 
-    def respond(self, submission: 'Submission', value, values: dict=None, group_values: dict=None, m: int = None, n_max = -1):
-        if m is None:
-            m = self.group.number
+    def respond(self, submission_data: dict, submission: 'Submission', value, group_number: int = None, n_max: int = -1,
+                values: dict = None, group_values: dict = None, *args, **kwargs):
+
+        if group_number is None:
+            group_number = self.group.number
 
         try:
             self.group.response_class().objects.create(submission=submission, question=self, value=value)
         except Exception as e:
-            thrown = AttributeError(f"Unable to respond to question {self} from {submission} using {value} due to {e}")
+            thrown = RuntimeError(f"Unable to respond to question {self} from {submission} using {value} due to {e}")
             thrown.__cause__ = e
             raise thrown
 
         var_name = "var_name_unset"
         try:
-            var_name = self.var_name(m, n_max)
+            var_name = self.var_name(group_number, n_max)
             if values is not None:
                 if 'responses' in values.keys():
                     r: dict = values['responses']
                     if 'all' in r.keys():
                         r['all'][var_name] = value
                 values[var_name] = value
+                if print_debug: print(f"\trespond.set_var {var_name} = {value}")
 
             if group_values is not None:
                 group_values[var_name] = value
         except Exception as e:
-            thrown = RuntimeError(f"Unable to add variable for {self} from {submission}, {var_name} to values dictionary with value {value} due to {e}")
+            thrown = RuntimeError(f"Unable to add variable for {self} from {submission}, {var_name} " +
+                                  f"to values dictionary with value {value} due to {e}")
             thrown.__cause__ = e
             raise thrown
 
@@ -2079,7 +2366,7 @@ class Indicator(Displayable):
         return self._name
 
 
-class IndicatorDataPoint(Displayable):
+class IndicatorDataPoint(Displayable):  # TODO make not namable...
     _name = 'IndicatorDataPoint'  # internal name
     _parent = 'Displayable'  # internal name
 
