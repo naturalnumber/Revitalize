@@ -13,7 +13,7 @@ from Revitalize.data_analysis_system import DataAnalysisSystem
 #def _(s): # TODO
 #    return s
 
-print_debug = True
+print_debug = False
 
 print_debug_a = False
 
