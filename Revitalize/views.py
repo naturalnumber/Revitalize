@@ -420,8 +420,8 @@ class UserSurveyHistoryViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
-        profile: Profile = self.request.user.profile
-        return profile.all_completed_surveys()
+        #profile: Profile = self.request.user.profile
+        return Submission.objects.filter(user=self.request.user, form__type=Form.FormType.SURVEY.value, processed=True)
 
 
 class ProfileRetrievalViewSet(viewsets.ModelViewSet):

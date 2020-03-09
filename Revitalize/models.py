@@ -449,7 +449,7 @@ class Profile(ModelBase):
         return Submission.objects.filter(user=self.user)
 
     def all_completed_surveys(self):
-        return Submission.objects.filter(user=self.user, form__type=Form.FormType.SURVEY.value)
+        return Submission.objects.filter(user=self.user, form__type=Form.FormType.SURVEY.value, )
 
     def submitted_forms(self, id):
         return Submission.objects.filter(user=self.user, form__id=id)
@@ -2443,6 +2443,8 @@ class Submission(ModelBase):
                 thrown.__cause__ = e
                 raise thrown
 
+        self.parsed = True
+
         try:
             self.form.r_validate(data, self)
         except ValidationError as e:
@@ -2451,7 +2453,6 @@ class Submission(ModelBase):
             thrown = ValidationError(f"Unable to parse submission data as JSON.")
             thrown.__cause__ = e
             raise thrown
-
 
         self.validated = True
 
@@ -2475,6 +2476,8 @@ class Submission(ModelBase):
             if print_debug: print(f"\tprocess form responded")
 
             self.form.analyse(self.user, self.time, output, self)
+
+            self.processed = True
 
             if print_debug: print(f"\tprocess analysed")
 
