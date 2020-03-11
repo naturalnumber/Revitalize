@@ -832,6 +832,7 @@ class UserSurveyHistorySerializer(serializers.ModelSerializer):
     description = serializers.SerializerMethodField()
     alt_survey_id = serializers.SerializerMethodField()
     results = serializers.SerializerMethodField()
+    time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", default_timezone=None)
 
     class Meta:
         model = Submission
