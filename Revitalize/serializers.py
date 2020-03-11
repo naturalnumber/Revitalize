@@ -889,7 +889,7 @@ class AvailableSurveySerializer(serializers.ModelSerializer):
 
 class ProfileRetrievalSerializer(serializers.ModelSerializer):
     address = AddressSerializer(many=False)
-    
+
     class Meta:
         model = Profile
         fields = ['id', 'first_name', 'middle_name', 'last_name', 'date_of_birth', 'gender', 'phone_number', 'phone_number_alt', 'email', 'address', 'ec_first_name', 'ec_middle_name', 'ec_last_name', 'ec_phone_number', 'physician', 'points', 'personal_message', 'profile_picture', 'password_flag', 'preferences']
