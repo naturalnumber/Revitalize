@@ -330,7 +330,7 @@ class CanadianAddress(ModelBase):
 
     street_address = models.CharField(max_length=250, blank=False)
     city = models.CharField(max_length=125, blank=False)
-    province = models.CharField(max_length=50, blank=False, choices=Province.choices)
+    province = models.CharField(max_length=2, blank=False, choices=Province.choices)
     postal_code = models.CharField(max_length=6, blank=False, db_index=True)
 
     def __str__(self):
@@ -370,14 +370,14 @@ class Profile(ModelBase):
     email = models.EmailField(blank=False, help_text="The contact email address.")
 
     # Abstract into an address object
-    #address = models.OneToOneField(Address, on_delete=models.CASCADE, verbose_name="Home Address")
+    address = models.OneToOneField(Address, on_delete=models.CASCADE, verbose_name="Home Address", related_name='user')
 
     # Legacy
-    street_address = models.CharField(max_length=200, blank=False)
-    city = models.CharField(max_length=100, blank=False)
-    province = models.CharField(max_length=50, blank=False)
-    country = models.CharField(max_length=25, blank=False)
-    postal_code = models.CharField(max_length=10, blank=False, db_index=True)
+    # street_address = models.CharField(max_length=200, blank=False)
+    # city = models.CharField(max_length=100, blank=False)
+    # province = models.CharField(max_length=50, blank=False)
+    # country = models.CharField(max_length=25, blank=False)
+    # postal_code = models.CharField(max_length=10, blank=False, db_index=True)
 
     ec_first_name = models.CharField(max_length=40, null=False, blank=True,
                                      verbose_name="Emergency Contact First Name")
@@ -434,7 +434,6 @@ class Profile(ModelBase):
     ModelHelper.register(_name, 'points', 50)
     ModelHelper.register(_name, 'personal_message', 50)
     ModelHelper.register(_name, 'profile_picture', 50, False)
-    ModelHelper.register(_name, 'points', 50)
     ModelHelper.register(_name, 'password_flag', 40, False)
     ModelHelper.register(_name, 'preferences', 28, False)
     ModelHelper.register(_name, 'notes', 30, to_serialize=False)

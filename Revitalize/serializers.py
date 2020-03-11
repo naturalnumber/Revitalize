@@ -56,11 +56,12 @@ class AddressSerializer(serializers.ModelSerializer):
     city = serializers.SerializerMethodField()
     province = serializers.SerializerMethodField()
     postal_code = serializers.SerializerMethodField()
+    country = serializers.SerializerMethodField()
 
     class Meta:
         model = Address
         fields = ModelHelper.serialize(model.__name__)
-        fields.extend(["street_address", "city", "province", "postal_code"])
+        fields.extend(["id", "street_address", "city", "province", "postal_code", "country"])
 
     def get_street_address(self, a: Address):
         return a.address.street_address
@@ -73,6 +74,9 @@ class AddressSerializer(serializers.ModelSerializer):
 
     def get_postal_code(self, a: Address):
         return a.address.postal_code
+
+    def get_country(self, a: Address):
+        return a.country
 
 
 class CanadianAddressSerializer(serializers.ModelSerializer):
@@ -88,7 +92,6 @@ class CanadianAddressSerializer(serializers.ModelSerializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer(many=False)
 
     class Meta:
         model = Profile
@@ -191,10 +194,10 @@ class QuestionSerializer(serializers.ModelSerializer):
         fields = ModelHelper.serialize(model.__name__)
 
     def get_name(self, n: Nameable):
-        return n.name.value
+        return _str(n.name)
 
     def get_description(self, n: Nameable):
-        return n.description.value
+        return _str(n.description)
 
     def get_text(self, q: Question):
         return q.text.value
@@ -238,10 +241,10 @@ class QuestionGroupSerializer(serializers.ModelSerializer):
         fields.extend(['question_data'])
 
     def get_name(self, n: Nameable):
-        return n.name.value
+        return _str(n.name)
 
     def get_description(self, n: Nameable):
-        return n.description.value
+        return _str(n.description)
 
     def get_text(self, q: QuestionGroup):
         return q.text.value
@@ -354,13 +357,13 @@ class IndicatorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Indicator
-        fields = ModelHelper.serialize(model.__name__)
+        fields = ['id', 'name', 'description']
 
     def get_name(self, n: Nameable):
-        return n.name.value
+        return _str(n.name)
 
     def get_description(self, n: Nameable):
-        return n.description.value
+        return _str(n.description)
 
 
 class IntDataPointSerializer(serializers.ModelSerializer):
@@ -672,10 +675,10 @@ class FormSerializerDisplay(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'type', 'display', 'elements']
 
     def get_name(self, n: Nameable):
-        return n.name.value
+        return _str(n.name)
 
     def get_description(self, n: Nameable):
-        return n.description.value
+        return _str(n.description)
 
     def get_elements(self, f: Form):
         elements = sorted(chain(f.text_elements.order_by('number').all(),
@@ -885,15 +888,34 @@ class AvailableSurveySerializer(serializers.ModelSerializer):
 
 
 class ProfileRetrievalSerializer(serializers.ModelSerializer):
+    address = AddressSerializer(many=False)
+    
     class Meta:
         model = Profile
-        fields = ModelHelper.serialize(model.__name__)
+        fields = ['id', 'first_name', 'middle_name', 'last_name', 'date_of_birth', 'gender', 'phone_number', 'phone_number_alt', 'email', 'address', 'ec_first_name', 'ec_middle_name', 'ec_last_name', 'ec_phone_number', 'physician', 'points', 'personal_message', 'profile_picture', 'password_flag', 'preferences']
 
 
 class UserIndicatorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Indicator
         fields = ModelHelper.serialize(model.__name__)
+
+
+class UserIndicatorDataSerializer(serializers.ModelSerializer):
+    data = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Indicator
+        fields = ['id', 'name', 'data']
+
+
+    def get_data(self, i: Indicator):
+        data_points = chain(i.int_data_points.all(), i.float_data_points.all())
+
+        ser = DataPointSerializerDisplay(data_points, many=True)
+
+        return ser.data
+
 
 
 # class FormSerializerDisplay2(serializers.ModelSerializer):

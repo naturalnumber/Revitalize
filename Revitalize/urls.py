@@ -17,7 +17,6 @@ router.register('available_surveys', AvailableSurveyViewSet, basename='available
 router.register('survey_history', UserSurveyHistoryViewSet, basename='survey_submission')
 router.register('profile_retrieval', ProfileRetrievalViewSet, basename='profile_retrieval')
 #router.register('profile', ProfileRetrievalViewSet.as_view({'get' : 'retrieve'}), basename='profile')
-router.register('user_indicator', UserIndicatorViewSet)
 router.register('text_elements', TextElementViewSet)
 router.register('question_groups', QuestionGroupViewSet)
 router.register('questions', QuestionViewSet)
@@ -36,8 +35,11 @@ router.register('responses_float', FloatResponseViewSet)
 router.register('indicators', IndicatorViewSet)
 router.register('data_points_int', IntDataPointViewSet)
 router.register('data_points_float', FloatDataPointViewSet)
+router.register('addresses', AddressViewSet)
 
 router.register('lab_values', LabValueViewSet, basename='lab_value')
+
+router.register('user_indicators', UserIndicatorViewSet, basename='user_indicator')
 
 # For debugging
 # router.register('surveys_d', SurveyViewSetAll)

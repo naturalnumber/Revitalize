@@ -1,4 +1,5 @@
-import Revitalize.models
+import Revitalize.models as models
+from Revitalize.models import Profile, Address, CanadianAddress
 from django.contrib.auth import get_user_model
 
 # To load this run:
@@ -188,32 +189,35 @@ def load_profiles(p: dict):
         user = User.objects.create_superuser(p['first_name'], '', 'cs4820')
 
     print(f"trying to make: {p['first_name']}")
+    
+    address_base = Address.objects.create(country=Address.Country.CANADA)
+    address = CanadianAddress.objects.create(base=address_base,
+                                             street_address=p['street_address'],
+                                             city=p['city'],
+                                             postal_code=p['postal_code'],
+                                             province=CanadianAddress.Province.PRINCE_EDWARD_ISLAND)
 
-    profile = Revitalize.models.Profile.objects.create(
-            user_id=p.__getitem__('user'),
-            first_name=p.__getitem__('first_name'),
-            middle_name=p.__getitem__('middle_name'),
-            last_name=p.__getitem__('last_name'),
-            date_of_birth=p.__getitem__('date_of_birth'),
-            gender=p.__getitem__('gender'),
-            phone_number=p.__getitem__('phone_number'),
-            phone_number_alt=p.__getitem__('phone_number_alt'),
-            email=p.__getitem__('email'),
-            street_address=p.__getitem__('street_address'),
-            city=p.__getitem__('city'),
-            province=p.__getitem__('province'),
-            country=p.__getitem__('country'),
-            postal_code=p.__getitem__('postal_code'),
-            ec_first_name=p.__getitem__('ec_first_name'),
-            ec_middle_name=p.__getitem__('ec_middle_name'),
-            ec_last_name=p.__getitem__('ec_last_name'),
-            ec_phone_number=p.__getitem__('ec_phone_number'),
-            physician=p.__getitem__('physician'),
-            points=p.__getitem__('points'),
-            personal_message=p.__getitem__('personal_message'),
-            profile_picture=p.__getitem__('profile_picture'),
-            password_flag=p.__getitem__('password_flag'),
-            preferences=p.__getitem__('preferences'),
+    profile = Profile.objects.create(
+            address=address_base,
+            user_id=p['user'],
+            first_name=p['first_name'],
+            middle_name=p['middle_name'],
+            last_name=p['last_name'],
+            date_of_birth=p['date_of_birth'],
+            gender=p['gender'],
+            phone_number=p['phone_number'],
+            phone_number_alt=p['phone_number_alt'],
+            email=p['email'],
+            ec_first_name=p['ec_first_name'],
+            ec_middle_name=p['ec_middle_name'],
+            ec_last_name=p['ec_last_name'],
+            ec_phone_number=p['ec_phone_number'],
+            physician=p['physician'],
+            points=p['points'],
+            personal_message=p['personal_message'],
+            profile_picture=p['profile_picture'],
+            password_flag=p['password_flag'],
+            preferences=p['preferences'],
     )
 
     print(f"created: {profile}")

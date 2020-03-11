@@ -271,6 +271,7 @@ class IndicatorViewSet(viewsets.ModelViewSet):
     queryset = _model.objects.all()
 
 
+
 class IntDataPointViewSet(viewsets.ModelViewSet):
     _model = IntDataPoint
     serializer_class = IntDataPointSerializer
@@ -479,8 +480,46 @@ class ProfileRetrievalViewSet(viewsets.ModelViewSet):
 
 
 class UserIndicatorViewSet(viewsets.ModelViewSet):
-    queryset = Indicator.objects.all()
-    serializer_class = UserIndicatorSerializer
+    _model = Indicator
+    serializer_class = IndicatorSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        user: User = self.request.user
+        return Indicator.objects.filter(float_data_points__user=user).distinct().all().union(
+                Indicator.objects.filter(float_data_points__user=user).distinct().all())
+
+    @action(detail=True, methods=['GET'])
+    def data(self, request, pk=None, *arg, **kwargs):
+        if print_debug: print(f"Indicator data request received for user")
+        try:
+            user: User = request.user
+
+            if print_debug: print(user)
+
+            indicator: Indicator = Indicator.objects.get(pk=pk)
+
+            points: QuerySet = None
+
+            if indicator.is_int():
+                points = IntDataPoint.objects.filter(user=user).order_by('-time')[:10]
+            elif indicator.is_float():
+                points = FloatDataPoint.objects.filter(user=user).order_by('-time')[:10]
+
+            if points is not None: # TODO length check?
+                serializer = DataPointSerializerDisplay(points, many=True)
+
+                response = {'message': 'Data Found', 'result': serializer.data}
+
+                to_send = Response(response, status=status.HTTP_200_OK)
+            else:
+                to_send = Response(_m('No Data Found'), status=status.HTTP_200_OK)
+            if print_debug: print(to_send)
+            return to_send
+        except Exception as e:
+            if print_debug: print(e)
+            return Response(_m(f"Could not access data ({e})"), status=status.HTTP_400_BAD_REQUEST)
+
 
 class LabValueViewSet(viewsets.ModelViewSet):
     _model = FloatDataPoint
