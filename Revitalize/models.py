@@ -2463,6 +2463,8 @@ class Submission(ModelBase):
 
         self.validated = True
 
+        self.save()
+
         return data
 
     def process(self, data=None):
@@ -2485,6 +2487,8 @@ class Submission(ModelBase):
             self.form.analyse(self.user, self.time, output, self)
 
             self.processed = True
+
+            self.save()
 
             if print_debug: print(f"\tprocess analysed")
 
