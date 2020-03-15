@@ -13,7 +13,7 @@ from Revitalize.data_analysis_system import DataAnalysisSystem
 #def _(s): # TODO
 #    return s
 
-print_debug = True
+print_debug = False
 
 print_debug_a = False
 
@@ -1400,7 +1400,7 @@ class QuestionGroup(FormElement):
             except (ValidationError, TypeError, ValueError) as e:
                 errors.append(e)
                 errors_n.append(n)
-                errors_q.append(n)
+                errors_q.append(q)
                 if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} errors.append({e}) -> continue")
                 continue
             except Exception as e:
@@ -1408,7 +1408,7 @@ class QuestionGroup(FormElement):
                 e.bad_value = n
                 errors.append(e)
                 errors_n.append(n)
-                errors_q.append(n)
+                errors_q.append(q)
                 if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} errors.append({e}) -> continue")
                 print(f"Unexpected error in {self.__class__.__name__}.{delegator}recurse( ... ) for {self}: {e}")
                 continue
@@ -1613,7 +1613,7 @@ class QuestionGroup(FormElement):
             except (ValidationError, TypeError, ValueError) as e:
                 errors.append(e)
                 errors_n.append(n)
-                errors_q.append(n)
+                errors_q.append(q)
                 if print_debug: print(f"\trespond-#{n} errors.append({e}) -> continue")
                 continue
 

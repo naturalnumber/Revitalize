@@ -55,7 +55,7 @@ def _ex(e: BaseException, data: dict):
         data['detail'] = e.detail
 
 
-def _ex_rc(e: BaseException, data: dict):
+def _recursive_exception_parse(e: BaseException, data: dict):
     _ex(e, data)
 
     cause = e.__cause__
@@ -69,6 +69,28 @@ def _ex_rc(e: BaseException, data: dict):
 
         cause = cause.__cause__
         parent = c_data
+
+
+def _transfer_valid(d: dict, s: dict, m, excluded_values: list = None):
+    if excluded_values is None:
+        excluded_values = [None]
+
+    if isinstance(m, dict):
+        for key, new_name in m.items():
+            # print(f"key = {key}, name = {new_name}, m = {m}, s = {s}")
+            if key in s.keys():
+                v = s[key]
+                # print(f"s[{key}] = {v} for key in {s}")
+                if v not in excluded_values:
+                    # print(f"d[{new_name}] = {v}")
+                    d[new_name] = v
+                    # print(f"d = {d}")
+    else:
+        for key in m:
+            if key in s.keys():
+                v = s[key]
+                if v not in excluded_values:
+                    d[key] = v
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -271,7 +293,6 @@ class IndicatorViewSet(viewsets.ModelViewSet):
     queryset = _model.objects.all()
 
 
-
 class IntDataPointViewSet(viewsets.ModelViewSet):
     _model = IntDataPoint
     serializer_class = IntDataPointSerializer
@@ -352,31 +373,48 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
                 if print_debug or print_debug2: print(f"Validation: {e}")
 
                 try:
-                    if hasattr(e, 'rev_error_list') and hasattr(e, 'rev_error_nums') and hasattr(e, 'rev_error_elements'):
+                    if hasattr(e, 'rev_error_list') and \
+                            hasattr(e, 'rev_error_nums') and \
+                            hasattr(e, 'rev_error_elements'):
                         errors = []
+                        errors_flat = []
 
                         for error, n, group in zip(e.rev_error_list, e.rev_error_nums, e.rev_error_elements):
+                            # print(f"error = {error}, n = {n}, group = {group}")
                             e_data = {
-                                    'element_number' : n,
+                                    'position_in_form' : n,
                                     'group_data' : group
                                            }
 
-                            _ex_rc(error, e_data)
+                            _recursive_exception_parse(error, e_data)
 
                             if hasattr(error, 'rev_error_list') and \
                                     hasattr(error, 'rev_error_nums') and \
                                     hasattr(error, 'rev_error_questions'):
                                 q_errors = []
-                                for q_error, q_n, question in zip(error.rev_error_list, error.rev_error_nums,
+                                for q_error, q_n, question in zip(error.rev_error_list,
+                                                                  error.rev_error_nums,
                                                                   error.rev_error_questions):
+                                    # print(f"q_error = {q_error}, q_n = {q_n}, question = {question}")
+                                    question: dict
                                     qe_data = {
-                                            'question_number' : q_n,
+                                            'position_in_form' : n,
+                                            'group_data' : group,
+                                            'position_in_element' : q_n,
                                             'question_data' : question
                                                    }
 
-                                    _ex_rc(q_error, qe_data)
+                                    _recursive_exception_parse(q_error, qe_data)
+
+                                    _transfer_valid(qe_data, question, {'number': 'question_number'})
+                                    _transfer_valid(qe_data, question, ['id', 'response'])
+                                    _transfer_valid(qe_data, group, {'number': 'group_number', 'id': 'group_id'})
+                                    _transfer_valid(qe_data, group, ['element_type',
+                                                                     'question_group_type',
+                                                                     'question_group_type_data'])
 
                                     q_errors.append(qe_data)
+                                    errors_flat.append(qe_data)
 
                                 if len(q_errors) > 0: e_data['questions'] = q_errors
 
@@ -384,7 +422,7 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
 
                         response = {
                                 'message' : _("Submission could not be validated."),
-                                'errors' : errors
+                                'errors' : errors_flat
                                     }
                         return Response(response, status=status.HTTP_400_BAD_REQUEST)
                 except Exception as ex:
