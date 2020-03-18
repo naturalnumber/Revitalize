@@ -181,7 +181,7 @@ class FloatRangeQuestionSerializer(serializers.ModelSerializer):
 
 
 class QuestionSerializer(serializers.ModelSerializer):
-    # Nameable
+    # Notable
     name = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
 
@@ -193,10 +193,10 @@ class QuestionSerializer(serializers.ModelSerializer):
         model = Question
         fields = ModelHelper.serialize(model.__name__)
 
-    def get_name(self, n: Nameable):
+    def get_name(self, n: Notable):
         return _str(n.name)
 
-    def get_description(self, n: Nameable):
+    def get_description(self, n: Notable):
         return _str(n.description)
 
     def get_text(self, q: Question):
@@ -210,7 +210,7 @@ class QuestionSerializer(serializers.ModelSerializer):
 
 
 class TextElementSerializer(serializers.ModelSerializer):
-    # Nameable
+    # Notable
     name = StringSerializer(many=False)
     description = TextSerializer(many=False)
 
@@ -223,7 +223,7 @@ class TextElementSerializer(serializers.ModelSerializer):
 
 
 class QuestionGroupSerializer(serializers.ModelSerializer):
-    # Nameable
+    # Notable
     name = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
 
@@ -240,10 +240,10 @@ class QuestionGroupSerializer(serializers.ModelSerializer):
         fields.extend(['questions'])
         fields.extend(['question_data'])
 
-    def get_name(self, n: Nameable):
+    def get_name(self, n: Notable):
         return _str(n.name)
 
-    def get_description(self, n: Nameable):
+    def get_description(self, n: Notable):
         return _str(n.description)
 
     def get_text(self, q: QuestionGroup):
@@ -282,7 +282,7 @@ class QuestionGroupSerializer(serializers.ModelSerializer):
 
 
 class FormSerializer(serializers.ModelSerializer):
-    # Nameable
+    # Notable
     name = StringSerializer(many=False)
     description = TextSerializer(many=False)
 
@@ -351,7 +351,7 @@ class FloatResponseSerializer(serializers.ModelSerializer):
 
 
 class IndicatorSerializer(serializers.ModelSerializer):
-    # Nameable
+    # Notable
     name = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
 
@@ -359,10 +359,10 @@ class IndicatorSerializer(serializers.ModelSerializer):
         model = Indicator
         fields = ['id', 'name', 'description']
 
-    def get_name(self, n: Nameable):
+    def get_name(self, n: Notable):
         return _str(n.name)
 
-    def get_description(self, n: Nameable):
+    def get_description(self, n: Notable):
         return _str(n.description)
 
 
@@ -392,7 +392,7 @@ class FloatDataPointSerializer(serializers.ModelSerializer):
 
 
 class QuestionSerializerDisplay(serializers.ModelSerializer):
-    # Nameable
+    # Notable
     #name = serializers.SerializerMethodField()
     #description = serializers.SerializerMethodField()
 
@@ -664,7 +664,7 @@ class QuestionGroupSerializerDisplay(serializers.ModelSerializer):
 
 
 class FormSerializerDisplay(serializers.ModelSerializer):
-    # Nameable
+    # Notable
     name = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
 
@@ -674,10 +674,10 @@ class FormSerializerDisplay(serializers.ModelSerializer):
         model = Form
         fields = ['id', 'name', 'description', 'type', 'display', 'elements']
 
-    def get_name(self, n: Nameable):
+    def get_name(self, n: Notable):
         return _str(n.name)
 
-    def get_description(self, n: Nameable):
+    def get_description(self, n: Notable):
         return _str(n.description)
 
     def get_elements(self, f: Form):

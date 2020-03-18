@@ -27,7 +27,7 @@ class DataAnalysisSystem:
     # certain (obscure) attacks.
     @staticmethod
     def process(expression: str, data: dict, simple: bool = True, return_debug: bool = False):
-        if not simple: raise NotImplementedError("not implemented yet")
+        # if not simple: raise NotImplementedError("not implemented yet")
 
         if print_debug: print(f"DataAnalysisSystem.process({expression}, \n{data})")
 

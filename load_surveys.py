@@ -1012,15 +1012,56 @@ empty_text = _t("")
 empty_string_group = _g("{}")
 
 Revitalize.models.Indicator.objects.create(name=_s("Height"),
-                                                 type=Revitalize.models.Indicator.DataType.FLOAT.value)
+                                           type=Revitalize.models.Indicator.DataType.FLOAT.value,
+                                           analysis=json.dumps({
+                                                   "outputs": [
+                                                        {
+                                                                "type": "Indicator",
+                                                                "name": "BMI",
+                                                                "calculation": "weight / height ** 2",
+                                                                "inputs" : [
+                                                                        {
+                                                                                "name": "Height",
+                                                                                "is_self": True,
+                                                                                # "variable_name": "height"
+                                                                        },
+                                                                        {
+                                                                                "name": "Weight",
+                                                                                # "variable_name": "weight"
+                                                                        }
+                                                                ]
+                                                        }
+                                                   ]
+                                           }))
 Revitalize.models.Indicator.objects.create(name=_s("Weight"),
-                                                 type=Revitalize.models.Indicator.DataType.FLOAT.value)
+                                           type=Revitalize.models.Indicator.DataType.FLOAT.value,
+                                           analysis=json.dumps({
+                                                   "outputs": [
+                                                        {
+                                                                "type": "Indicator",
+                                                                "name": "BMI",
+                                                                "calculation": "weight / height ** 2",
+                                                                "inputs" : [
+                                                                        {
+                                                                                "name": "Weight",
+                                                                                "is_self": True,
+                                                                                # "variable_name": "weight"
+                                                                        },
+                                                                        {
+                                                                                "name": "Height",
+                                                                                # "variable_name": "height"
+                                                                        }
+                                                                ]
+                                                        }
+                                                   ]
+                                           }))
 Revitalize.models.Indicator.objects.create(name=_s("BMI"),
-                                                 type=Revitalize.models.Indicator.DataType.FLOAT.value)
+                                           type=Revitalize.models.Indicator.DataType.FLOAT.value)
 
 ind = Revitalize.models.Indicator.objects.create(name=_s("SEMCD6 Score"),
                                                  type=Revitalize.models.Indicator.DataType.FLOAT.value)
 semcd6["analysis"]['outputs'][0]["id"] = ind.id
+# semcd6["analysis"]['outputs'][0]['name'] = "SEMCD6 Score"
 
 ind = Revitalize.models.Indicator.objects.create(name=_s("PHQ9 Score"),
                                                  type=Revitalize.models.Indicator.DataType.INT.value)

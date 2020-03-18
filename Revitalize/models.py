@@ -2,6 +2,7 @@ from datetime import datetime
 from json import JSONDecodeError
 
 from django.contrib.auth.models import User
+from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models.query import QuerySet
 from django.utils.translation import gettext as _ # TODO gettext_lazy
@@ -15,7 +16,7 @@ from Revitalize.data_analysis_system import DataAnalysisSystem
 
 print_debug = False
 
-print_debug_a = False
+print_debug_a = True
 
 print_test_data = False
 
@@ -245,6 +246,9 @@ class ModelBase(models.Model):
     class Meta:
         abstract = True
 
+    def __str__(self):
+        return f"{self.__class__._name} ({self.id})"
+
     # Used with views and serializers
     ModelHelper.register(_name, 'id', 100, to_serialize=False, to_search=True)
     ModelHelper.register(_name, 'flags', 10, False, to_serialize=False, to_search=True, text_type='JSON')
@@ -311,6 +315,8 @@ class CanadianAddress(ModelBase):
     _name = 'CanadianAddress'  # internal name
     _parent = 'ModelBase'  # internal name
 
+    _postal_regex = "[ABCEGHJKLMNPRSTVXY]\d[A-Z]\d[A-Z]\d"
+
     base = models.OneToOneField(Address, on_delete=models.CASCADE, related_name='address')
 
     class Province(models.TextChoices):
@@ -331,7 +337,7 @@ class CanadianAddress(ModelBase):
     street_address = models.CharField(max_length=250, blank=False)
     city = models.CharField(max_length=125, blank=False)
     province = models.CharField(max_length=2, blank=False, choices=Province.choices)
-    postal_code = models.CharField(max_length=6, blank=False, db_index=True)
+    postal_code = models.CharField(max_length=6, blank=False, db_index=True, validators=[RegexValidator(regex=_postal_regex, message=_("Invalid postal code"))])
 
     def __str__(self):
         return f"{self.street_address} {self.city} {self.province} {self.postal_code} {self.base.country}"
@@ -457,17 +463,29 @@ class Profile(ModelBase):
         return Submission.objects.filter(user=self.user, form__surveys__id=id)
 
 
-class Nameable(ModelBase):
-    _name = 'Nameable'  # internal name
+class Notable(ModelBase):
+    _name = 'Notable'  # internal name
     _parent = 'ModelBase'  # internal name
+
+    notes = models.TextField(blank=True, null=False, help_text="The notes associated with this entry.")
+
+    class Meta:
+        abstract = True
+
+    # Used with views and serializers
+    ModelHelper.inherit(_parent, _name)
+    ModelHelper.register(_name, 'notes', 30, to_serialize=False)
+
+
+class Nameable(Notable):
+    _name = 'Nameable'  # internal name
+    _parent = 'Notable'  # internal name
 
     # TODO The on delete should be sorted and the keys may want to be one to one
     name = models.ForeignKey(String, on_delete=models.SET_NULL, null=True,  # related_name='strings',
                              help_text="The name of this entry.")
     description = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True,  # related_name='texts',
                                     help_text="The description of this entry.")
-
-    notes = models.TextField(blank=True, null=False, help_text="The notes associated with this entry.")
 
     class Meta:
         abstract = True
@@ -479,12 +497,27 @@ class Nameable(ModelBase):
     ModelHelper.inherit(_parent, _name)
     ModelHelper.register(_name, 'name', 85, to_filter=True, to_search=True, foreign=String)
     ModelHelper.register(_name, 'description', 35, foreign=Text)
-    ModelHelper.register(_name, 'notes', 30, to_serialize=False)
 
 
-class Processable(Nameable):
-    _name = 'Processable'  # internal name
+class Displayable(Nameable):
+    _name = 'Displayable'  # internal name
     _parent = 'Nameable'  # internal name
+
+    # This will be used to store any information required for display
+    display = models.TextField(blank=False, default="{}", validators=[validate_json],
+                               help_text="This should be a JSON of information used by the front end.")
+
+    class Meta:
+        abstract = True
+
+    # Used with views and serializers
+    ModelHelper.inherit(_parent, _name)
+    ModelHelper.register(_name, 'display', 27, False, text_type='JSON')
+
+
+class Analysable(Displayable):
+    _name = 'Analysable'  # internal name
+    _parent = 'Displayable'  # internal name
 
     # This will be used by the data validation subsystem
     specification = models.TextField(blank=False, default="{}", validators=[validate_json],
@@ -512,8 +545,12 @@ class Processable(Nameable):
         if calculation.find('__') != -1:
             raise ValidationError("Calculations may not contain __")
 
-    def analyse(self, user: User, time: datetime, data: dict, source: 'Submission', testing=False):
-        if print_debug_a: print(f"{self.__class__}.analyse({user}, {time},\n{data},\n{source}, {testing})")
+    def analyse(self, user: User, time: datetime, data: dict, submission: 'Submission',
+                point: 'IndicatorDataPoint'=None, recursing=False, testing=False):
+        if print_debug_a: print(f"{self.__class__}.analyse({user}, {time},\n{data},\n{submission}, {testing})")
+
+        if recursing:
+            data = {"last_step": data}
 
         analysis: dict = json.loads(self.analysis)
 
@@ -560,21 +597,114 @@ class Processable(Nameable):
                         debug.append(('outputs', out, "Calculations may not contain __", calculation))
                         continue
 
-                    if 'id' not in out.keys():
-                        if print_debug_a: print(f"\tanalyse: out has no id {out}")
-                        debug.append(('outputs', out, 'No indicator id'))
-                        continue
-
-                    ind_id = out['id']
-
-                    if print_debug_a: print(f"\tanalyse: id {ind_id}")
-
                     try:
-                        indicator = Indicator.objects.get(id=ind_id)
-                        if indicator is None:
-                            if print_debug_a: print(f"\tanalyse: id invalid {ind_id}")
-                            debug.append(('output_indicators', ind_id, 'Indicator not found'))
+                        if 'id' in out.keys():
+                            ind_id = out['id']
+
+                            if print_debug_a: print(f"\tanalyse: id {ind_id}")
+
+                            indicator = Indicator.objects.get(id=ind_id)
+
+                            if indicator is None:
+                                if print_debug_a: print(f"\tanalyse: id invalid {ind_id}")
+                                debug.append(('output_indicators', ind_id, 'Indicator not found'))
+                                continue
+                        elif 'name' in out.keys():
+                            ind_name = out['name']
+
+                            q_set: QuerySet = Indicator.objects.filter(name__value=ind_name)
+
+                            indicator = q_set.first() if q_set is not None else None
+
+                            if indicator is None:
+                                if print_debug_a: print(f"\tanalyse: name invalid {ind_name}")
+                                debug.append(('output_indicators', ind_name, 'Indicator not found'))
+                                continue
+                        else:
+                            if print_debug_a: print(f"\tanalyse: out has no id or name {out}")
+                            debug.append(('outputs', out, 'No indicator id or name'))
                             continue
+
+                        if 'inputs' in out.keys():
+                            inputs = out['inputs']
+                            if not isinstance(inputs, list):
+                                if print_debug_a: print(f"\tanalyse: inputs invalid {inputs}")
+                                debug.append(('output_indicator_inputs', inputs, 'Inputs format not valid'))
+                                continue
+                            inputs: list
+
+                            for input in inputs:
+                                if not isinstance(inputs, dict):
+                                    if print_debug_a: print(f"\tanalyse: input invalid {input}")
+                                    debug.append(('output_indicator_inputs', input, 'Input format not valid'))
+                                    continue
+                                input: dict
+
+                                try:
+                                    if 'is_self' in input.keys() and bool(input['is_self']):
+                                        if not hasattr(point, 'value'):
+                                            if print_debug_a: print(
+                                                f"\tanalyse: self value on invalid type {input}")
+                                            debug.append(('output_indicator_inputs', input, 'Input self not valid'))
+                                            continue
+
+                                        in_value = point.value
+
+                                        if 'variable_name' in input.keys():
+                                            var_name = input['variable_name']
+                                        else:
+                                            var_name = self.name.value.lower().replace(" ", "_")
+                                    else:
+                                        if 'id' in input.keys():
+                                            in_ind_id = input['id']
+
+                                            in_indicator = Indicator.objects.get(id=in_ind_id)
+
+                                            if in_indicator is None:
+                                                if print_debug_a: print(f"\tanalyse: id invalid {in_ind_id}")
+                                                debug.append(('output_indicator_inputs', in_ind_id,
+                                                              'Indicator not found'))
+                                                continue
+                                        elif 'name' in input.keys():
+                                            in_ind_name = input['name']
+
+                                            q_set: QuerySet = Indicator.objects.filter(name__value=in_ind_name)
+
+                                            in_indicator = q_set.first() if q_set is not None else None
+
+                                            if in_indicator is None:
+                                                if print_debug_a: print(f"\tanalyse: name invalid {in_ind_name}")
+                                                debug.append(('output_indicator_inputs', in_ind_name,
+                                                              'Indicator not found'))
+                                                continue
+                                        else:
+                                            if print_debug_a: print(f"\tanalyse: input invalid no identifier")
+                                            debug.append(('output_indicator_inputs', input, 'Indicator not found'))
+                                            continue
+
+                                        in_point = in_indicator.get_most_recent(user=user)
+
+                                        if in_point is None:
+                                            if 'default_value' in input['default_value']:
+                                                in_value = input['default_value']
+                                            else:
+                                                in_value = None
+                                        else:
+                                            in_point: IntDataPoint  # or FloatDataPoint
+
+                                            in_value = in_point.value
+
+                                        if 'variable_name' in input.keys():
+                                            var_name = input['variable_name']
+                                        else:
+                                            var_name = in_indicator.name.value.lower().replace(" ", "_")
+
+                                    data[var_name] = in_value
+
+                                except Exception as e:
+                                    if print_debug_a: print(f"\tanalyse: input process error {e}")
+                                    debug.append(('output_indicator_inputs', e, 'Input process error'))
+                                    continue
 
                         # May need dynamic data addition here...
 
@@ -586,12 +716,12 @@ class Processable(Nameable):
 
                         if value is None:
                             if print_debug_a: print(f"\tanalyse: no value")
-                            debug.append(('output_indicators', ind_id, 'No value'))
+                            debug.append(('output_indicators', indicator, 'No value'))
                             continue
 
                         if not isinstance(value, int) and not isinstance(value, float):
                             if print_debug_a: print(f"\tanalyse: invalid value type {type(value)}")
-                            debug.append(('output_indicators', ind_id, "Invalid value type", value))
+                            debug.append(('output_indicators', indicator, "Invalid value type", value))
                             continue
 
                         # This should be unnecessary, but is prudent
@@ -605,7 +735,7 @@ class Processable(Nameable):
                         if print_debug_a: print(f"\tanalyse: {value} is valid? {valid}")
 
                         if not valid:
-                            debug.append(('output_indicators', ind_id, "Value failed to validate", value))
+                            debug.append(('output_indicators', indicator, "Value failed to validate", value))
                             continue
 
                         point = None
@@ -616,21 +746,15 @@ class Processable(Nameable):
 
                         p_name = f"{indicator.name} value for {user} at {time}"
 
-                        # TODO
                         p_name_s = String.objects.create(value=p_name)
 
-                        if indicator.is_int():
-                            point = IntDataPoint.objects.create(indicator=indicator, time=time, value=value,
-                                                                validated=True, processed=False,
-                                                                user=user, source=source, name=p_name_s)
-                        elif indicator.is_float():
-                            point = FloatDataPoint.objects.create(indicator=indicator, time=time, value=value,
-                                                                  validated=True, processed=False,
-                                                                  user=user, source=source, name=p_name_s)
+                        point = indicator.data_class().objects.create(indicator=indicator, time=time, value=value,
+                                                                      validated=True, processed=False,
+                                                                      user=user, source=submission, name=p_name_s) #
 
                         if point is None:
                             if print_debug_a: print(f"\tanalyse: failed to create point {p_name}")
-                            debug.append(('output_indicators', ind_id, "Failed to create point", value))
+                            debug.append(('output_indicators', indicator, "Failed to create point", value))
                             continue
 
                         if print_debug_a: print(f"\tanalyse: {value} -> {point}")
@@ -638,41 +762,25 @@ class Processable(Nameable):
 
                     except Exception as e:
                         if print_debug_a: print(f"\tanalyse: unexpected error {e}")
-                        debug.append(('outputs', ind_id, e))
+                        debug.append(('outputs', out, e))
                 else:
                     if print_debug_a: print(f"\tanalyse: {out['type']} =/= {Indicator._name}")
         else:
             if print_debug_a: print(f"\tanalyse: no outputs")
 
         if len(debug) > 0:
-            if source.notes is None:
-                source.notes = ""
-            elif len(source.notes) > 0:
-                source.notes += "\n\n\n"
-            source.notes += f"analysis at {datetime.utcnow()} had the following debug output: {debug}"
+            if submission.notes is None:
+                submission.notes = ""
+            elif len(submission.notes) > 0:
+                submission.notes += "\n\n\n"
+            submission.notes += f"analysis at {datetime.utcnow()} had the following debug output: {debug}"
             if print_debug_a: print(f"\tanalysis at {datetime.utcnow()} had the following debug output: {debug}")
 
         for p in points:
-            p.analyse(user, time, data, source)
+            p.indicator.analyse(user=user, time=time, data=data, submission=submission, point=p, recursing=True)
 
 
-class Displayable(Processable):
-    _name = 'Displayable'  # internal name
-    _parent = 'Processable'  # internal name
-
-    # This will be used to store any information required for display
-    display = models.TextField(blank=False, default="{}", validators=[validate_json],
-                               help_text="This should be a JSON of information used by the front end.")
-
-    class Meta:
-        abstract = True
-
-    # Used with views and serializers
-    ModelHelper.inherit(_parent, _name)
-    ModelHelper.register(_name, 'display', 27, False, text_type='JSON')
-
-
-class Form(Displayable):
+class Form(Analysable):
     _name = 'Form'  # internal name
     _parent = 'Displayable'  # internal name
 
@@ -2630,7 +2738,7 @@ class FloatResponse(ResponseType):
     ModelHelper.register(_name, 'value', 75, to_filter=True, to_search=True)
 
 
-class Indicator(Displayable):
+class Indicator(Analysable):
     _name = 'Indicator'  # internal name
     _parent = 'Displayable'  # internal name
 
@@ -2660,12 +2768,22 @@ class Indicator(Displayable):
 
         return True
 
+    def data_class(self):
+        if self.is_int():
+            return IntDataPoint
+        elif self.is_float():
+            return FloatDataPoint
+        return None
+
     @property
     def type_name(self):
         return self._name
 
+    def get_most_recent(self, user: User):
+        return self.data_class().objects.filter(user=user).order_by('-time')[0]
 
-class IndicatorDataPoint(Displayable):  # TODO make not namable...
+
+class IndicatorDataPoint(Nameable):
     _name = 'IndicatorDataPoint'  # internal name
     _parent = 'Displayable'  # internal name
 
