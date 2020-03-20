@@ -1,5 +1,5 @@
 from django.db.models.query import QuerySet
-from django.utils.datetime_safe import datetime, date
+from django.utils.datetime_safe import datetime, date, time
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -350,7 +350,8 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
             elif 'time' in submission_data:
                 time = submission_data['time']
             else:
-                time = datetime.utcnow().replace(tzinfo=timezone.utc)  # timezone.now()
+                time = timezone.now() # Django set to utc
+                # datetime.utcnow().replace(tzinfo=timezone.utc)  #
             if print_debug: print(time)
 
             if isinstance(submission_data, dict):
@@ -559,19 +560,39 @@ class UserIndicatorViewSet(viewsets.ModelViewSet):
             if 'min_date' in data.keys():
                 if 'max_date' in data.keys():
                     points = indicator.data_class().objects.filter(user=user,
-                                                                   time__gte=date.fromisoformat(data['min_date']),
-                                                                   time__lte=date.fromisoformat(data['max_date'])
+                                                                   time__gte=timezone.datetime.combine(date
+                                                                       .fromisoformat(
+                                                                           data['min_date']),
+                                                                           time(hour=0, minute=0, second=0))
+                                                               .replace(tzinfo=timezone.utc),
+                                                                   time__lte=timezone.datetime.combine(date
+                                                                       .fromisoformat(
+                                                                           data['max_date']),
+                                                                           time(hour=0, minute=0, second=0))
+                                                               .replace(tzinfo=timezone.utc),
+                                                                   indicator=indicator
                                                                    ).order_by('-time').all()
                 else:
                     points = indicator.data_class().objects.filter(user=user,
-                                                                   time__gte=date.fromisoformat(data['min_date'])
+                                                                   time__gte=timezone.datetime.combine(date
+                                                                       .fromisoformat(
+                                                                           data['min_date']),
+                                                                           time(hour=0, minute=0, second=0))
+                                                               .replace(tzinfo=timezone.utc),
+                                                                   indicator=indicator
                                                                    ).order_by('-time')[:max_values]
             elif 'max_date' in data.keys():
                 points = indicator.data_class().objects.filter(user=user,
-                                                               time__lte=date.fromisoformat(data['max_date'])
+                                                               time__lte=timezone.datetime.combine(date
+                                                                   .fromisoformat(
+                                                                       data['max_date']),
+                                                                       time(hour=0, minute=0, second=0))
+                                                               .replace(tzinfo=timezone.utc),
+                                                               indicator=indicator
                                                                ).order_by('-time')[:max_values]
             else:
-                points = indicator.data_class().objects.filter(user=user).order_by('-time')[:max_values]
+                points = indicator.data_class().objects.filter(user=user,
+                                                               indicator=indicator).order_by('-time')[:max_values]
 
             if points is not None: # TODO length check?
                 serializer = DataPointSerializerDisplayBasic(points, many=True)
@@ -631,22 +652,44 @@ class LabValueViewSet(viewsets.ModelViewSet):
             if 'max_values' in data.keys():
                 max_values = data['max_values']
 
+            #print(data.keys())
+
             if 'min_date' in data.keys():
                 if 'max_date' in data.keys():
                     points = indicator.data_class().objects.filter(user=user,
-                                                                   time__gte=date.fromisoformat(data['min_date']),
-                                                                   time__lte=date.fromisoformat(data['max_date'])
+                                                                   time__gte=timezone.datetime.combine(date
+                                                                       .fromisoformat(
+                                                                           data['min_date']),
+                                                                           time(hour=0, minute=0, second=0))
+                                                               .replace(tzinfo=timezone.utc),
+                                                                   time__lte=timezone.datetime.combine(date
+                                                                       .fromisoformat(
+                                                                           data['max_date']),
+                                                                           time(hour=0, minute=0, second=0))
+                                                               .replace(tzinfo=timezone.utc),
+                                                                   indicator=indicator
                                                                    ).order_by('-time').all()
                 else:
                     points = indicator.data_class().objects.filter(user=user,
-                                                                   time__gte=date.fromisoformat(data['min_date'])
+                                                                   time__gte=timezone.datetime.combine(date
+                                                                       .fromisoformat(
+                                                                           data['min_date']),
+                                                                           time(hour=0, minute=0, second=0))
+                                                               .replace(tzinfo=timezone.utc),
+                                                                   indicator=indicator
                                                                    ).order_by('-time')[:max_values]
             elif 'max_date' in data.keys():
                 points = indicator.data_class().objects.filter(user=user,
-                                                               time__lte=date.fromisoformat(data['max_date'])
+                                                               time__lte=timezone.datetime.combine(date
+                                                                   .fromisoformat(
+                                                                       data['max_date']),
+                                                                       time(hour=0, minute=0, second=0))
+                                                               .replace(tzinfo=timezone.utc),
+                                                               indicator=indicator
                                                                ).order_by('-time')[:max_values]
             else:
-                points = indicator.data_class().objects.filter(user=user).order_by('-time')[:max_values]
+                points = indicator.data_class().objects.filter(user=user,
+                                                               indicator=indicator).order_by('-time')[:max_values]
 
             if points is not None: # TODO length check?
                 serializer = DataPointSerializerDisplayBasic(points, many=True)

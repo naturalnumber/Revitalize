@@ -237,12 +237,12 @@ def load_profiles(p: dict):
 
     height_i = Indicator.objects.filter(name__value="Height")[0]
     if height_i is not None:
-        FloatDataPoint.objects.create(user=user, indicator=height_i, time=datetime.utcnow().replace(tzinfo=timezone.utc),
+        FloatDataPoint.objects.create(user=user, indicator=height_i, time=timezone.now(),
                                       value=p['height'])
 
     weight_i = Indicator.objects.filter(name__value="Weight")[0]
     if weight_i is not None:
-        FloatDataPoint.objects.create(user=user, indicator=weight_i, time=datetime.utcnow().replace(tzinfo=timezone.utc),
+        FloatDataPoint.objects.create(user=user, indicator=weight_i, time=timezone.now(),
                                       value=p['weight'])
 
 
