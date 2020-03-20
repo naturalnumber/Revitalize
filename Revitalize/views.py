@@ -1,5 +1,5 @@
 from django.db.models.query import QuerySet
-from django.utils.datetime_safe import date
+from django.utils.datetime_safe import datetime, date
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -7,7 +7,6 @@ from rest_framework.response import Response
 from django.utils.translation import gettext as _
 
 from Revitalize.serializers import *
-#from datetime import date
 from django.utils import timezone
 import pytz
 
@@ -526,8 +525,9 @@ class UserIndicatorViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user: User = self.request.user
-        return Indicator.objects.filter(float_data_points__user=user).distinct().all().union(
-                Indicator.objects.filter(float_data_points__user=user).distinct().all())
+        return Indicator.objects.filter(float_data_points__user=user, origin=Indicator.OriginType.SURVEY.value).distinct()\
+            .all().union(Indicator.objects.filter(int_data_points__user=user, origin=Indicator.OriginType.SURVEY.value)\
+                         .distinct().all())
 
     @action(detail=True, methods=['GET'])
     def data(self, request, pk=None, *arg, **kwargs):
@@ -574,7 +574,7 @@ class UserIndicatorViewSet(viewsets.ModelViewSet):
                 points = indicator.data_class().objects.filter(user=user).order_by('-time')[:max_values]
 
             if points is not None: # TODO length check?
-                serializer = DataPointSerializerDisplay(points, many=True)
+                serializer = DataPointSerializerDisplayBasic(points, many=True)
 
                 response = {'message': 'Data Found',
                             'indicator_data': indicator.get_graph_info(user=user),
@@ -591,6 +591,75 @@ class UserIndicatorViewSet(viewsets.ModelViewSet):
 
 
 class LabValueViewSet(viewsets.ModelViewSet):
-    _model = FloatDataPoint
-    serializer_class = FloatDataPointSerializer
-    queryset = _model.objects.all()
+    # _model = FloatDataPoint
+    # serializer_class = FloatDataPointSerializer
+    # queryset = _model.objects.all()
+    _model = Indicator
+    serializer_class = IndicatorSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        user: User = self.request.user
+        return Indicator.objects.filter(float_data_points__user=user, origin=Indicator.OriginType.LAB.value).distinct()\
+            .all().union(Indicator.objects.filter(int_data_points__user=user, origin=Indicator.OriginType.LAB.value)\
+                         .distinct().all())
+
+    @action(detail=True, methods=['GET'])
+    def data(self, request, pk=None, *arg, **kwargs):
+        if print_debug: print(f"Indicator data request received for user")
+        try:
+            if 'data' not in dir(request):
+                return _bad("Must provide submission data.")
+            if pk is None:
+                return _bad("No key provided.")
+
+            user: User = request.user
+            data: dict = request.data
+
+            if print_debug: print(user)
+
+            indicator: Indicator = Indicator.objects.get(pk=pk)
+
+            points: QuerySet = None
+
+            # if indicator.is_int():
+            #     points = IntDataPoint.objects.filter(user=user)
+            # elif indicator.is_float():
+            #     points = FloatDataPoint.objects.filter(user=user)
+
+            max_values = 100
+            if 'max_values' in data.keys():
+                max_values = data['max_values']
+
+            if 'min_date' in data.keys():
+                if 'max_date' in data.keys():
+                    points = indicator.data_class().objects.filter(user=user,
+                                                                   time__gte=date.fromisoformat(data['min_date']),
+                                                                   time__lte=date.fromisoformat(data['max_date'])
+                                                                   ).order_by('-time').all()
+                else:
+                    points = indicator.data_class().objects.filter(user=user,
+                                                                   time__gte=date.fromisoformat(data['min_date'])
+                                                                   ).order_by('-time')[:max_values]
+            elif 'max_date' in data.keys():
+                points = indicator.data_class().objects.filter(user=user,
+                                                               time__lte=date.fromisoformat(data['max_date'])
+                                                               ).order_by('-time')[:max_values]
+            else:
+                points = indicator.data_class().objects.filter(user=user).order_by('-time')[:max_values]
+
+            if points is not None: # TODO length check?
+                serializer = DataPointSerializerDisplayBasic(points, many=True)
+
+                response = {'message': 'Data Found',
+                            'indicator_data': indicator.get_graph_info(user=user),
+                            'data_points': serializer.data}
+
+                to_send = Response(response, status=status.HTTP_200_OK)
+            else:
+                to_send = Response(_m('No Data Found'), status=status.HTTP_200_OK)
+            if print_debug: print(to_send)
+            return to_send
+        except Exception as e:
+            if print_debug: print(e)
+            return Response(_m(f"Could not access data ({e})"), status=status.HTTP_400_BAD_REQUEST)

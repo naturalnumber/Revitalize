@@ -1,5 +1,8 @@
+from django.utils import timezone
+from django.utils.datetime_safe import datetime
+
 import Revitalize.models as models
-from Revitalize.models import Profile, Address, CanadianAddress
+from Revitalize.models import Profile, Address, CanadianAddress, Indicator, FloatDataPoint
 from django.contrib.auth import get_user_model
 
 # To load this run:
@@ -35,7 +38,9 @@ profile0 = {
         "personal_message": "Personal Message Admin",
         "profile_picture": "null",
         "password_flag": "True",
-        "preferences": "{}"
+        "preferences": "{}",
+        "height": 1.1,
+        "weight": 71
 }
 
 profile1 = {
@@ -62,7 +67,9 @@ profile1 = {
         "personal_message": "PersonalMessageOne",
         "profile_picture": "null",
         "password_flag": "True",
-        "preferences": "{}"
+        "preferences": "{}",
+        "height": 1.2,
+        "weight": 72
 }
 
 
@@ -90,7 +97,9 @@ profile2 = {
         "personal_message": "PersonalMessageTwo",
         "profile_picture": "null",
         "password_flag": "True",
-        "preferences": "{}"
+        "preferences": "{}",
+        "height": 1.3,
+        "weight": 73
 }
 
 
@@ -118,7 +127,9 @@ profile3 = {
         "personal_message": "PersonalMessageThree",
         "profile_picture": "null",
         "password_flag": "True",
-        "preferences": "{}"
+        "preferences": "{}",
+        "height": 1.4,
+        "weight": 74
 }
 
 
@@ -146,7 +157,9 @@ profile4 = {
         "personal_message": "PersonalMessageFour",
         "profile_picture": "null",
         "password_flag": "True",
-        "preferences": "{}"
+        "preferences": "{}",
+        "height": 1.5,
+        "weight": 75
 }
 
 
@@ -174,7 +187,9 @@ profile5 = {
         "personal_message": "PersonalMessageFive",
         "profile_picture": "null",
         "password_flag": "True",
-        "preferences": "{}"
+        "preferences": "{}",
+        "height": 1.6,
+        "weight": 76
 }
 
 profile_list = [profile0, profile1, profile2, profile3, profile4, profile5]
@@ -186,7 +201,7 @@ def load_profiles(p: dict):
     try:
         user = User.objects.get(pk=p['user'])
     except:
-        user = User.objects.create_superuser(p['first_name'], '', 'cs4820')
+        user = User.objects.create_user(p['first_name'], '', 'cs4820')
 
     print(f"trying to make: {p['first_name']}")
     
@@ -199,7 +214,7 @@ def load_profiles(p: dict):
 
     profile = Profile.objects.create(
             address=address_base,
-            user_id=p['user'],
+            user=user,
             first_name=p['first_name'],
             middle_name=p['middle_name'],
             last_name=p['last_name'],
@@ -219,6 +234,17 @@ def load_profiles(p: dict):
             password_flag=p['password_flag'],
             preferences=p['preferences'],
     )
+
+    height_i = Indicator.objects.filter(name__value="Height")[0]
+    if height_i is not None:
+        FloatDataPoint.objects.create(user=user, indicator=height_i, time=datetime.utcnow().replace(tzinfo=timezone.utc),
+                                      value=p['height'])
+
+    weight_i = Indicator.objects.filter(name__value="Weight")[0]
+    if weight_i is not None:
+        FloatDataPoint.objects.create(user=user, indicator=weight_i, time=datetime.utcnow().replace(tzinfo=timezone.utc),
+                                      value=p['weight'])
+
 
     print(f"created: {profile}")
 

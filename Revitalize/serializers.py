@@ -840,6 +840,41 @@ class DataPointSerializerDisplay(serializers.ModelSerializer):
         serializer = self.get_serializer(instance.__class__)
         return serializer(instance, context=self.context).data
 
+
+class IntDataPointSerializerDisplayBasic(serializers.ModelSerializer):
+    type = serializers.SerializerMethodField()
+
+    class Meta:
+        model = IntDataPoint
+        fields = ['id', 'time', 'value', 'type']
+
+    def get_type(self, p: FloatDataPoint):
+        return p.indicator.type
+
+
+class FloatDataPointSerializerDisplayBasic(serializers.ModelSerializer):
+    type = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FloatDataPoint
+        fields = ['id', 'time', 'value', 'type']
+
+    def get_type(self, p: FloatDataPoint):
+        return p.indicator.type
+
+
+class DataPointSerializerDisplayBasic(serializers.ModelSerializer):
+    @classmethod
+    def get_serializer(cls, model):
+        if model == IntDataPoint:
+            return IntDataPointSerializerDisplayBasic
+        elif model == FloatDataPoint:
+            return FloatDataPointSerializerDisplayBasic
+
+    def to_representation(self, instance):
+        serializer = self.get_serializer(instance.__class__)
+        return serializer(instance, context=self.context).data
+
 # Endpoint related
 
 

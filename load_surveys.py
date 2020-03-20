@@ -1012,6 +1012,7 @@ empty_text = _t("")
 empty_string_group = _g("{}")
 
 Revitalize.models.Indicator.objects.create(name=_s("Height"),
+                                           origin=Revitalize.models.Indicator.OriginType.LAB.value,
                                            type=Revitalize.models.Indicator.DataType.FLOAT.value,
                                            good=Revitalize.models.Indicator.GoalType.NONE,
                                            analysis=json.dumps({
@@ -1035,6 +1036,7 @@ Revitalize.models.Indicator.objects.create(name=_s("Height"),
                                                    ]
                                            }))
 Revitalize.models.Indicator.objects.create(name=_s("Weight"),
+                                           origin=Revitalize.models.Indicator.OriginType.LAB.value,
                                            type=Revitalize.models.Indicator.DataType.FLOAT.value,
                                            good=Revitalize.models.Indicator.GoalType.NONE,
                                            analysis=json.dumps({
@@ -1058,11 +1060,13 @@ Revitalize.models.Indicator.objects.create(name=_s("Weight"),
                                                    ]
                                            }))
 Revitalize.models.Indicator.objects.create(name=_s("BMI"),
+                                           origin=Revitalize.models.Indicator.OriginType.LAB.value,
                                            type=Revitalize.models.Indicator.DataType.FLOAT.value,
                                            good=Revitalize.models.Indicator.GoalType.TARGET.value,
                                            target=21.25, dynamic=False)
 
 ind = Revitalize.models.Indicator.objects.create(name=_s("SEMCD6 Score"),
+                                                 origin=Revitalize.models.Indicator.OriginType.SURVEY.value,
                                                  type=Revitalize.models.Indicator.DataType.FLOAT.value,
                                                  good=Revitalize.models.Indicator.GoalType.HIGH.value,
                                                  min=1.0, max=10.0, target=10.0, dynamic=False)
@@ -1070,12 +1074,14 @@ semcd6["analysis"]['outputs'][0]["id"] = ind.id
 # semcd6["analysis"]['outputs'][0]['name'] = "SEMCD6 Score"
 
 ind = Revitalize.models.Indicator.objects.create(name=_s("PHQ9 Score"),
+                                                 origin=Revitalize.models.Indicator.OriginType.SURVEY.value,
                                                  type=Revitalize.models.Indicator.DataType.INT.value,
                                                  good=Revitalize.models.Indicator.GoalType.LOW.value,
                                                  min=0, max=27, target=0, dynamic=False)
 phq9["analysis"]['outputs'][0]["id"] = ind.id
 
 ind = Revitalize.models.Indicator.objects.create(name=_s("GAD7 Score"),
+                                                 origin=Revitalize.models.Indicator.OriginType.SURVEY.value,
                                                  type=Revitalize.models.Indicator.DataType.INT.value,
                                                  good=Revitalize.models.Indicator.GoalType.LOW.value,
                                                  min=0, max=21, target=0, dynamic=False)

@@ -10,5 +10,5 @@
 load_all = True
 
 if load_all:
-    exec(open("./load_profiles.py").read())
     exec(open("./load_surveys.py").read())
+    exec(open("./load_profiles.py").read())

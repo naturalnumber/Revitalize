@@ -2744,6 +2744,12 @@ class Indicator(Analysable):
     _parent = 'Displayable'  # internal name
 
     # Determined by above
+    class OriginType(models.TextChoices):
+        UNKNOWN = '?', _('Unknown')
+        SURVEY = 'S', _('Survey')
+        LAB = 'L', _('Lab Value')
+
+    # Determined by above
     class DataType(models.TextChoices):
         UNKNOWN = '?', _('Unknown')
         INT = 'I', _('Integer')
@@ -2757,6 +2763,8 @@ class Indicator(Analysable):
         TARGET = 'T', _('Target Value is Good')
         RANGE = 'R', _('Target Range is Good')
         NONE = 'N', _('No Best Value')
+
+    origin = models.CharField(max_length=1, blank=False, choices=DataType.choices, default=OriginType.UNKNOWN)
 
     type = models.CharField(max_length=1, blank=False, choices=DataType.choices, default=DataType.UNKNOWN)
 
