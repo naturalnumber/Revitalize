@@ -4,6 +4,7 @@ from json import JSONDecodeError
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 from django.db import models
+from django.db.migrations.serializer import DictionarySerializer
 from django.db.models.query import QuerySet
 from django.utils.translation import gettext as _ # TODO gettext_lazy
 from rest_framework.exceptions import ValidationError
@@ -2748,7 +2749,28 @@ class Indicator(Analysable):
         INT = 'I', _('Integer')
         FLOAT = 'D', _('Decimal')
 
+    # Determined by above
+    class GoalType(models.TextChoices):
+        UNKNOWN = '?', _('Unknown')
+        HIGH = 'H', _('High is Good')
+        LOW = 'L', _('Low is Good')
+        TARGET = 'T', _('Target Value is Good')
+        RANGE = 'R', _('Target Range is Good')
+        NONE = 'N', _('No Best Value')
+
     type = models.CharField(max_length=1, blank=False, choices=DataType.choices, default=DataType.UNKNOWN)
+
+    good = models.CharField(max_length=1, blank=False, choices=DataType.choices, default=GoalType.UNKNOWN)
+
+    max = models.FloatField(null=True)
+    target = models.FloatField(null=True)
+    min = models.FloatField(null=True)
+
+    dynamic = models.BooleanField(blank=False, default=False)
+    categorizable = models.BooleanField(blank=False, default=False)
+
+    conversion = models.TextField(blank=False, default="{}", validators=[validate_json],
+                                  help_text="This should be a JSON containing the conversion data for the categories.")
 
     ModelHelper.register(_name, 'type', 85, to_filter=True, to_search=True)
 
@@ -2781,6 +2803,51 @@ class Indicator(Analysable):
 
     def get_most_recent(self, user: User):
         return self.data_class().objects.filter(user=user).order_by('-time')[0]
+
+    def get_goal_message(self):
+        if self.good == Indicator.GoalType.UNKNOWN.value:
+            return Indicator.GoalType.UNKNOWN.label
+        elif self.good == Indicator.GoalType.HIGH.value:
+            return Indicator.GoalType.HIGH.label
+        elif self.good == Indicator.GoalType.LOW.value:
+            return Indicator.GoalType.LOW.label
+        elif self.good == Indicator.GoalType.TARGET.value:
+            return Indicator.GoalType.TARGET.label
+        elif self.good == Indicator.GoalType.RANGE.value:
+            return Indicator.GoalType.RANGE.label
+        elif self.good == Indicator.GoalType.NONE.value:
+            return Indicator.GoalType.NONE.label
+
+    def get_basic_info(self):
+        info = {}
+
+        if not self.dynamic:
+            info['max'] = self.max
+            info['min'] = self.min
+            info['target'] = self.target
+            info['goal_message'] = self.get_goal_message()
+        else:
+            # TODO
+            pass
+
+        return info  # json.dumps(info)
+
+    def get_graph_info(self, user):
+        info = {}
+
+        if not self.dynamic:
+            info['id'] = self.id
+            info['name'] = _str(self.name)
+            info['description'] = _str(self.description)
+            info['max'] = self.max
+            info['min'] = self.min
+            info['target'] = self.target
+            info['goal_message'] = self.get_goal_message()
+        else:
+            # TODO
+            pass
+
+        return info  # json.dumps(info)
 
 
 class IndicatorDataPoint(Nameable):

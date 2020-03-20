@@ -1,4 +1,5 @@
 from django.db.models.query import QuerySet
+from django.utils.datetime_safe import date
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -6,6 +7,7 @@ from rest_framework.response import Response
 from django.utils.translation import gettext as _
 
 from Revitalize.serializers import *
+#from datetime import date
 from django.utils import timezone
 import pytz
 
@@ -349,7 +351,7 @@ class SurveyViewSetFrontEnd(viewsets.ModelViewSet):
             elif 'time' in submission_data:
                 time = submission_data['time']
             else:
-                time = timezone.now()
+                time = datetime.utcnow().replace(tzinfo=timezone.utc)  # timezone.now()
             if print_debug: print(time)
 
             if isinstance(submission_data, dict):
@@ -531,7 +533,13 @@ class UserIndicatorViewSet(viewsets.ModelViewSet):
     def data(self, request, pk=None, *arg, **kwargs):
         if print_debug: print(f"Indicator data request received for user")
         try:
+            if 'data' not in dir(request):
+                return _bad("Must provide submission data.")
+            if pk is None:
+                return _bad("No key provided.")
+
             user: User = request.user
+            data: dict = request.data
 
             if print_debug: print(user)
 
@@ -539,15 +547,38 @@ class UserIndicatorViewSet(viewsets.ModelViewSet):
 
             points: QuerySet = None
 
-            if indicator.is_int():
-                points = IntDataPoint.objects.filter(user=user).order_by('-time')[:10]
-            elif indicator.is_float():
-                points = FloatDataPoint.objects.filter(user=user).order_by('-time')[:10]
+            # if indicator.is_int():
+            #     points = IntDataPoint.objects.filter(user=user)
+            # elif indicator.is_float():
+            #     points = FloatDataPoint.objects.filter(user=user)
+
+            max_values = 100
+            if 'max_values' in data.keys():
+                max_values = data['max_values']
+
+            if 'min_date' in data.keys():
+                if 'max_date' in data.keys():
+                    points = indicator.data_class().objects.filter(user=user,
+                                                                   time__gte=date.fromisoformat(data['min_date']),
+                                                                   time__lte=date.fromisoformat(data['max_date'])
+                                                                   ).order_by('-time').all()
+                else:
+                    points = indicator.data_class().objects.filter(user=user,
+                                                                   time__gte=date.fromisoformat(data['min_date'])
+                                                                   ).order_by('-time')[:max_values]
+            elif 'max_date' in data.keys():
+                points = indicator.data_class().objects.filter(user=user,
+                                                               time__lte=date.fromisoformat(data['max_date'])
+                                                               ).order_by('-time')[:max_values]
+            else:
+                points = indicator.data_class().objects.filter(user=user).order_by('-time')[:max_values]
 
             if points is not None: # TODO length check?
                 serializer = DataPointSerializerDisplay(points, many=True)
 
-                response = {'message': 'Data Found', 'result': serializer.data}
+                response = {'message': 'Data Found',
+                            'indicator_data': indicator.get_graph_info(user=user),
+                            'data_points': serializer.data}
 
                 to_send = Response(response, status=status.HTTP_200_OK)
             else:
