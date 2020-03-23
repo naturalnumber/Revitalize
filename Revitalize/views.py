@@ -457,7 +457,7 @@ class AvailableSurveyViewSet(viewsets.ReadOnlyModelViewSet):
 
 class UserSurveyHistoryViewSet(viewsets.ModelViewSet):
     _model = Submission
-    serializer_class = UserSurveyHistorySerializer
+    serializer_class = UserSubmissionHistorySerializer
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
@@ -519,15 +519,29 @@ class ProfileRetrievalViewSet(viewsets.ModelViewSet):
             return Response(_m(f"Could not access profile ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
 
+class UserIndicatorDataViewSet(viewsets.ModelViewSet):
+    _model = Indicator
+    serializer_class = UserIndicatorDataSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        # , origin=Indicator.OriginType.SURVEY.value
+        user: User = self.request.user
+        return Indicator.objects.filter(float_data_points__user=user).distinct()\
+            .all().union(Indicator.objects.filter(int_data_points__user=user)
+                         .distinct().all())
+
+
 class UserIndicatorViewSet(viewsets.ModelViewSet):
     _model = Indicator
     serializer_class = IndicatorSerializer
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
+        # , origin=Indicator.OriginType.SURVEY.value
         user: User = self.request.user
-        return Indicator.objects.filter(float_data_points__user=user, origin=Indicator.OriginType.SURVEY.value).distinct()\
-            .all().union(Indicator.objects.filter(int_data_points__user=user, origin=Indicator.OriginType.SURVEY.value)\
+        return Indicator.objects.filter(float_data_points__user=user).distinct()\
+            .all().union(Indicator.objects.filter(int_data_points__user=user)
                          .distinct().all())
 
     @action(detail=True, methods=['GET'])
@@ -555,10 +569,12 @@ class UserIndicatorViewSet(viewsets.ModelViewSet):
 
             max_values = 100
             if 'max_values' in data.keys():
+                if print_debug: print(f"data['max_values'] = {data['max_values']}")
                 max_values = data['max_values']
 
             if 'min_date' in data.keys():
                 if 'max_date' in data.keys():
+                    if print_debug: print(f"data['min_date'] = {data['min_date']}, data['max_date'] = {data['max_date']}")
                     points = indicator.data_class().objects.filter(user=user,
                                                                    time__gte=timezone.datetime.combine(date
                                                                        .fromisoformat(
@@ -573,6 +589,7 @@ class UserIndicatorViewSet(viewsets.ModelViewSet):
                                                                    indicator=indicator
                                                                    ).order_by('-time').all()
                 else:
+                    if print_debug: print(f"data['min_date'] = {data['min_date']}")
                     points = indicator.data_class().objects.filter(user=user,
                                                                    time__gte=timezone.datetime.combine(date
                                                                        .fromisoformat(
@@ -582,6 +599,7 @@ class UserIndicatorViewSet(viewsets.ModelViewSet):
                                                                    indicator=indicator
                                                                    ).order_by('-time')[:max_values]
             elif 'max_date' in data.keys():
+                if print_debug: print(f"data['max_date'] = {data['max_date']}")
                 points = indicator.data_class().objects.filter(user=user,
                                                                time__lte=timezone.datetime.combine(date
                                                                    .fromisoformat(
@@ -591,15 +609,96 @@ class UserIndicatorViewSet(viewsets.ModelViewSet):
                                                                indicator=indicator
                                                                ).order_by('-time')[:max_values]
             else:
+                if print_debug: print(f"data has no date range")
                 points = indicator.data_class().objects.filter(user=user,
                                                                indicator=indicator).order_by('-time')[:max_values]
 
             if points is not None: # TODO length check?
+                if print_debug: print(f"points is not none")
                 serializer = DataPointSerializerDisplayBasic(points, many=True)
 
                 response = {'message': 'Data Found',
                             'indicator_data': indicator.get_graph_info(user=user),
                             'data_points': serializer.data}
+
+                if print_debug: print(f"|points| = {len(points)}")
+
+                to_send = Response(response, status=status.HTTP_200_OK)
+            else:
+                to_send = Response(_m('No Data Found'), status=status.HTTP_200_OK)
+            if print_debug: print(to_send)
+            return to_send
+        except Exception as e:
+            if print_debug: print(e)
+            return Response(_m(f"Could not access data ({e})"), status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['GET'])
+    def all_data(self, request, *arg, **kwargs):
+        if print_debug: print(f"Indicator data request received for user")
+        try:
+            if 'data' not in dir(request):
+                return _bad("Must provide submission data.")
+
+            user: User = request.user
+            data: dict = request.data
+
+            if print_debug: print(user)
+
+            max_values = 100
+            if 'max_values' in data.keys():
+                if print_debug: print(f"data['max_values'] = {data['max_values']}")
+                max_values = data['max_values']
+
+            min_date: datetime = None
+            max_date: datetime = None
+            if 'min_date' in data.keys():
+                if print_debug: print(f"data['min_date'] = {data['min_date']}")
+                min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
+                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+            if 'max_date' in data.keys():
+                if print_debug: print(f"data['max_date'] = {data['max_date']}")
+                max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
+                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+
+            indicators: QuerySet = Indicator.objects.filter(float_data_points__user=user).distinct().all()\
+                .union(Indicator.objects.filter(int_data_points__user=user).distinct().all())
+
+            indicator: Indicator
+
+            indicator_data = []
+
+            for indicator in indicators:
+                points: QuerySet = None
+
+                if min_date is not None:
+                    if max_date is not None:
+                        points = indicator.data_class().objects.filter(user=user,
+                                                                       time__gte=min_date, time__lte=max_date,
+                                                                       indicator=indicator
+                                                                       ).order_by('-time').all()
+                    else:
+                        points = indicator.data_class().objects.filter(user=user,
+                                                                       time__gte=min_date, time__lte=max_date,
+                                                                       indicator=indicator
+                                                                       ).order_by('-time')[:max_values]
+                elif max_date is not None:
+                        points = indicator.data_class().objects.filter(user=user,
+                                                                       time__gte=min_date, time__lte=max_date,
+                                                                       indicator=indicator
+                                                                       ).order_by('-time')[:max_values]
+                else:
+                    points = indicator.data_class().objects.filter(user=user,
+                                                                   indicator=indicator).order_by('-time')[:max_values]
+
+                if points is not None:
+                    serializer = DataPointSerializerDisplayBasic(points, many=True)
+
+                    indicator_data.append({'indicator_data': indicator.get_graph_info(user=user),
+                                           'data_points': serializer.data})
+
+            if len(indicator_data) > 0:
+                response = {'message': 'Data Found',
+                            'all_indicator_data': indicator_data}
 
                 to_send = Response(response, status=status.HTTP_200_OK)
             else:
@@ -611,7 +710,185 @@ class UserIndicatorViewSet(viewsets.ModelViewSet):
             return Response(_m(f"Could not access data ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
 
-class LabValueViewSet(viewsets.ModelViewSet):
+class UserSurveyIndicatorViewSet(viewsets.ModelViewSet):
+    _model = Indicator
+    serializer_class = IndicatorSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        user: User = self.request.user
+        return Indicator.objects.filter(float_data_points__user=user, origin=Indicator.OriginType.SURVEY.value)\
+            .distinct().all().union(
+                Indicator.objects.filter(int_data_points__user=user, origin=Indicator.OriginType.SURVEY.value)
+                         .distinct().all())
+
+    @action(detail=True, methods=['GET'])
+    def data(self, request, pk=None, *arg, **kwargs):
+        if print_debug: print(f"Indicator data request received for user")
+        try:
+            if 'data' not in dir(request):
+                return _bad("Must provide submission data.")
+            if pk is None:
+                return _bad("No key provided.")
+
+            user: User = request.user
+            data: dict = request.data
+
+            if print_debug: print(user)
+
+            indicator: Indicator = Indicator.objects.get(pk=pk)
+
+            points: QuerySet = None
+
+            # if indicator.is_int():
+            #     points = IntDataPoint.objects.filter(user=user)
+            # elif indicator.is_float():
+            #     points = FloatDataPoint.objects.filter(user=user)
+
+            max_values = 100
+            if 'max_values' in data.keys():
+                if print_debug: print(f"data['max_values'] = {data['max_values']}")
+                max_values = data['max_values']
+
+            if 'min_date' in data.keys():
+                if 'max_date' in data.keys():
+                    if print_debug: print(f"data['min_date'] = {data['min_date']}, data['max_date'] = {data['max_date']}")
+                    points = indicator.data_class().objects.filter(user=user,
+                                                                   time__gte=timezone.datetime.combine(date
+                                                                       .fromisoformat(
+                                                                           data['min_date']),
+                                                                           time(hour=0, minute=0, second=0))
+                                                               .replace(tzinfo=timezone.utc),
+                                                                   time__lte=timezone.datetime.combine(date
+                                                                       .fromisoformat(
+                                                                           data['max_date']),
+                                                                           time(hour=0, minute=0, second=0))
+                                                               .replace(tzinfo=timezone.utc),
+                                                                   indicator=indicator
+                                                                   ).order_by('-time').all()
+                else:
+                    if print_debug: print(f"data['min_date'] = {data['min_date']}")
+                    points = indicator.data_class().objects.filter(user=user,
+                                                                   time__gte=timezone.datetime.combine(date
+                                                                       .fromisoformat(
+                                                                           data['min_date']),
+                                                                           time(hour=0, minute=0, second=0))
+                                                               .replace(tzinfo=timezone.utc),
+                                                                   indicator=indicator
+                                                                   ).order_by('-time')[:max_values]
+            elif 'max_date' in data.keys():
+                if print_debug: print(f"data['max_date'] = {data['max_date']}")
+                points = indicator.data_class().objects.filter(user=user,
+                                                               time__lte=timezone.datetime.combine(date
+                                                                   .fromisoformat(
+                                                                       data['max_date']),
+                                                                       time(hour=0, minute=0, second=0))
+                                                               .replace(tzinfo=timezone.utc),
+                                                               indicator=indicator
+                                                               ).order_by('-time')[:max_values]
+            else:
+                if print_debug: print(f"data has no date range")
+                points = indicator.data_class().objects.filter(user=user,
+                                                               indicator=indicator).order_by('-time')[:max_values]
+
+            if points is not None: # TODO length check?
+                if print_debug: print(f"points is not none")
+                serializer = DataPointSerializerDisplayBasic(points, many=True)
+
+                response = {'message': 'Data Found',
+                            'indicator_data': indicator.get_graph_info(user=user),
+                            'data_points': serializer.data}
+
+                if print_debug: print(f"|points| = {len(points)}")
+
+                to_send = Response(response, status=status.HTTP_200_OK)
+            else:
+                to_send = Response(_m('No Data Found'), status=status.HTTP_200_OK)
+            if print_debug: print(to_send)
+            return to_send
+        except Exception as e:
+            if print_debug: print(e)
+            return Response(_m(f"Could not access data ({e})"), status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['GET'])
+    def all_data(self, request, *arg, **kwargs):
+        if print_debug: print(f"Indicator data request received for user")
+        try:
+            if 'data' not in dir(request):
+                return _bad("Must provide submission data.")
+
+            user: User = request.user
+            data: dict = request.data
+
+            if print_debug: print(user)
+
+            max_values = 100
+            if 'max_values' in data.keys():
+                if print_debug: print(f"data['max_values'] = {data['max_values']}")
+                max_values = data['max_values']
+
+            min_date: datetime = None
+            max_date: datetime = None
+            if 'min_date' in data.keys():
+                if print_debug: print(f"data['min_date'] = {data['min_date']}")
+                min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
+                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+            if 'max_date' in data.keys():
+                if print_debug: print(f"data['max_date'] = {data['max_date']}")
+                max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
+                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+
+            indicators: QuerySet = Indicator.objects.filter(float_data_points__user=user, origin=Indicator.OriginType.SURVEY.value).distinct().all()\
+                .union(Indicator.objects.filter(int_data_points__user=user, origin=Indicator.OriginType.SURVEY.value).distinct().all())
+
+            indicator: Indicator
+
+            indicator_data = []
+
+            for indicator in indicators:
+                points: QuerySet = None
+
+                if min_date is not None:
+                    if max_date is not None:
+                        points = indicator.data_class().objects.filter(user=user,
+                                                                       time__gte=min_date, time__lte=max_date,
+                                                                       indicator=indicator
+                                                                       ).order_by('-time').all()
+                    else:
+                        points = indicator.data_class().objects.filter(user=user,
+                                                                       time__gte=min_date, time__lte=max_date,
+                                                                       indicator=indicator
+                                                                       ).order_by('-time')[:max_values]
+                elif max_date is not None:
+                        points = indicator.data_class().objects.filter(user=user,
+                                                                       time__gte=min_date, time__lte=max_date,
+                                                                       indicator=indicator
+                                                                       ).order_by('-time')[:max_values]
+                else:
+                    points = indicator.data_class().objects.filter(user=user,
+                                                                   indicator=indicator).order_by('-time')[:max_values]
+
+                if points is not None:
+                    serializer = DataPointSerializerDisplayBasic(points, many=True)
+
+                    indicator_data.append({'indicator_data': indicator.get_graph_info(user=user),
+                                           'data_points': serializer.data})
+
+            if len(indicator_data) > 0:
+                response = {'message': 'Data Found',
+                            'all_indicator_data': indicator_data}
+
+                to_send = Response(response, status=status.HTTP_200_OK)
+            else:
+                to_send = Response(_m('No Data Found'), status=status.HTTP_200_OK)
+            if print_debug: print(to_send)
+            return to_send
+        except Exception as e:
+            if print_debug: print(e)
+            return Response(_m(f"Could not access data ({e})"), status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserLabIndicatorViewSet(viewsets.ModelViewSet):
     # _model = FloatDataPoint
     # serializer_class = FloatDataPointSerializer
     # queryset = _model.objects.all()
@@ -706,3 +983,90 @@ class LabValueViewSet(viewsets.ModelViewSet):
         except Exception as e:
             if print_debug: print(e)
             return Response(_m(f"Could not access data ({e})"), status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['GET'])
+    def all_data(self, request, *arg, **kwargs):
+        if print_debug: print(f"Indicator data request received for user")
+        try:
+            if 'data' not in dir(request):
+                return _bad("Must provide submission data.")
+
+            user: User = request.user
+            data: dict = request.data
+
+            if print_debug: print(user)
+
+            max_values = 100
+            if 'max_values' in data.keys():
+                if print_debug: print(f"data['max_values'] = {data['max_values']}")
+                max_values = data['max_values']
+
+            min_date: datetime = None
+            max_date: datetime = None
+            if 'min_date' in data.keys():
+                if print_debug: print(f"data['min_date'] = {data['min_date']}")
+                min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
+                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+            if 'max_date' in data.keys():
+                if print_debug: print(f"data['max_date'] = {data['max_date']}")
+                max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
+                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+
+            indicators: QuerySet = Indicator.objects.filter(float_data_points__user=user, origin=Indicator.OriginType.LAB.value).distinct().all()\
+                .union(Indicator.objects.filter(int_data_points__user=user, origin=Indicator.OriginType.LAB.value).distinct().all())
+
+            indicator: Indicator
+
+            indicator_data = []
+
+            for indicator in indicators:
+                points: QuerySet = None
+
+                if min_date is not None:
+                    if max_date is not None:
+                        points = indicator.data_class().objects.filter(user=user,
+                                                                       time__gte=min_date, time__lte=max_date,
+                                                                       indicator=indicator
+                                                                       ).order_by('-time').all()
+                    else:
+                        points = indicator.data_class().objects.filter(user=user,
+                                                                       time__gte=min_date, time__lte=max_date,
+                                                                       indicator=indicator
+                                                                       ).order_by('-time')[:max_values]
+                elif max_date is not None:
+                        points = indicator.data_class().objects.filter(user=user,
+                                                                       time__gte=min_date, time__lte=max_date,
+                                                                       indicator=indicator
+                                                                       ).order_by('-time')[:max_values]
+                else:
+                    points = indicator.data_class().objects.filter(user=user,
+                                                                   indicator=indicator).order_by('-time')[:max_values]
+
+                if points is not None:
+                    serializer = DataPointSerializerDisplayBasic(points, many=True)
+
+                    indicator_data.append({'indicator_data': indicator.get_graph_info(user=user),
+                                           'data_points': serializer.data})
+
+            if len(indicator_data) > 0:
+                response = {'message': 'Data Found',
+                            'all_indicator_data': indicator_data}
+
+                to_send = Response(response, status=status.HTTP_200_OK)
+            else:
+                to_send = Response(_m('No Data Found'), status=status.HTTP_200_OK)
+            if print_debug: print(to_send)
+            return to_send
+        except Exception as e:
+            if print_debug: print(e)
+            return Response(_m(f"Could not access data ({e})"), status=status.HTTP_400_BAD_REQUEST)
+
+
+class LabValueViewSet(viewsets.ModelViewSet):
+    _model = Submission
+    serializer_class = UserSubmissionHistorySerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        #profile: Profile = self.request.user.profile
+        return Submission.objects.filter(user=self.request.user, form__type=Form.FormType.MEDICAL_LAB.value, processed=True)

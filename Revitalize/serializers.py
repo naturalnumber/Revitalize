@@ -878,7 +878,7 @@ class DataPointSerializerDisplayBasic(serializers.ModelSerializer):
 # Endpoint related
 
 
-class UserSurveyHistorySerializer(serializers.ModelSerializer):
+class UserSubmissionHistorySerializer(serializers.ModelSerializer):
     submission_id = serializers.SerializerMethodField()
     survey_id = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
@@ -960,7 +960,7 @@ class UserIndicatorDataSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Indicator
-        fields = ['id', 'name', 'data']
+        fields = ['id', 'name', 'description', 'data']
 
 
     def get_data(self, i: Indicator):

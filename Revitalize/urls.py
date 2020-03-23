@@ -41,6 +41,11 @@ router.register('lab_values', LabValueViewSet, basename='lab_value')
 
 router.register('user_indicators', UserIndicatorViewSet, basename='user_indicator')
 
+router.register('user_indicator_data', UserIndicatorDataViewSet, basename='user_indicator_data')
+
+router.register('user_survey_indicators', UserSurveyIndicatorViewSet, basename='user_survey_indicator')
+router.register('user_lab_indicators', UserLabIndicatorViewSet, basename='user_lab_indicator')
+
 # For debugging
 # router.register('surveys_d', SurveyViewSetAll)
 # router.register('surveys_0', SurveyViewSet)
