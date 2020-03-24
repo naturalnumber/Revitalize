@@ -772,60 +772,45 @@ class SurveySerializerDisplay(serializers.ModelSerializer):
         return ListSerializer([e[1] for e in elements])
 
 
-class IntDataPointSerializerDisplay(serializers.ModelSerializer):
+class AbstractDataPointSerializerDisplay(serializers.ModelSerializer):
     type = serializers.SerializerMethodField()
     indicator_id = serializers.SerializerMethodField()
-    # indicator_name = serializers.SerializerMethodField()
     indicator_data = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
+    submission_date = serializers.SerializerMethodField()
 
+    class Meta:
+        fields = ['id', 'time', 'value', 'type', 'validated', 'processed', 'indicator_id', 'name',
+                  'indicator_data', 'submission_date']
+
+    def get_name(self, p: FloatDataPoint):
+        return _str(p.indicator.name)
+
+    def get_type(self, p: FloatDataPoint):
+        return p.indicator.type
+
+    def get_indicator_id(self, p: FloatDataPoint):
+        return p.indicator_id
+
+    def get_indicator_data(self, p: FloatDataPoint):
+        return p.indicator.get_basic_info()
+
+    def get_submission_date(self, p: FloatDataPoint):
+        return p.time.date().isoformat()
+
+
+class IntDataPointSerializerDisplay(AbstractDataPointSerializerDisplay):
     class Meta:
         model = IntDataPoint
-        fields = ['id', 'time', 'value', 'type', 'validated', 'processed', 'indicator_id', 'name',
-                  'indicator_data'] # 'indicator_name',
-
-    def get_name(self, p: FloatDataPoint):
-        return _str(p.indicator.name)
-
-    def get_type(self, p: FloatDataPoint):
-        return p.indicator.type
-
-    def get_indicator_id(self, p: FloatDataPoint):
-        return p.indicator_id
-
-    # def get_indicator_name(self, p: FloatDataPoint):
-    #     return _str(p.indicator.name)
-
-    def get_indicator_data(self, p: FloatDataPoint):
-        return p.indicator.get_basic_info()
+        fields = ['id', 'time', 'submission_date', 'value', 'type', 'name', 'indicator_id', 'indicator_data',
+                  'validated', 'processed']
 
 
-class FloatDataPointSerializerDisplay(serializers.ModelSerializer):
-    type = serializers.SerializerMethodField()
-    indicator_id = serializers.SerializerMethodField()
-    # indicator_name = serializers.SerializerMethodField()
-    indicator_data = serializers.SerializerMethodField()
-    name = serializers.SerializerMethodField()
-
+class FloatDataPointSerializerDisplay(AbstractDataPointSerializerDisplay):
     class Meta:
         model = FloatDataPoint
-        fields = ['id', 'time', 'value', 'type', 'validated', 'processed', 'indicator_id', 'name',
-                  'indicator_data'] # 'indicator_name',
-
-    def get_name(self, p: FloatDataPoint):
-        return _str(p.indicator.name)
-
-    def get_type(self, p: FloatDataPoint):
-        return p.indicator.type
-
-    def get_indicator_id(self, p: FloatDataPoint):
-        return p.indicator_id
-
-    # def get_indicator_name(self, p: FloatDataPoint):
-    #     return _str(p.indicator.name)
-
-    def get_indicator_data(self, p: FloatDataPoint):
-        return p.indicator.get_basic_info()
+        fields = ['id', 'time', 'submission_date', 'value', 'type', 'name', 'indicator_id', 'indicator_data',
+                  'validated', 'processed']
 
 
 class DataPointSerializerDisplay(serializers.ModelSerializer):

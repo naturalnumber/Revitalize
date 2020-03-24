@@ -2780,6 +2780,8 @@ class Indicator(Analysable):
     conversion = models.TextField(blank=False, default="{}", validators=[validate_json],
                                   help_text="This should be a JSON containing the conversion data for the categories.")
 
+    unit = models.CharField(max_length=40, blank=True)
+
     ModelHelper.register(_name, 'type', 85, to_filter=True, to_search=True)
 
     def is_int(self):

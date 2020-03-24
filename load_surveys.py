@@ -1015,6 +1015,7 @@ Revitalize.models.Indicator.objects.create(name=_s("Height"),
                                            origin=Revitalize.models.Indicator.OriginType.LAB.value,
                                            type=Revitalize.models.Indicator.DataType.FLOAT.value,
                                            good=Revitalize.models.Indicator.GoalType.NONE,
+                                           unit='m',
                                            analysis=json.dumps({
                                                    "outputs": [
                                                         {
@@ -1039,6 +1040,7 @@ Revitalize.models.Indicator.objects.create(name=_s("Weight"),
                                            origin=Revitalize.models.Indicator.OriginType.LAB.value,
                                            type=Revitalize.models.Indicator.DataType.FLOAT.value,
                                            good=Revitalize.models.Indicator.GoalType.NONE,
+                                           unit='kg',
                                            analysis=json.dumps({
                                                    "outputs": [
                                                         {
