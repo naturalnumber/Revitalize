@@ -1,6 +1,10 @@
+from django.apps import apps
 from django.contrib.admin import AdminSite
+from django.contrib import admin
 
 from Revitalize.models import *
+
+# Administrator Admin Site
 
 
 class AdminsSite(AdminSite):
@@ -9,34 +13,16 @@ class AdminsSite(AdminSite):
 
 admin_site = AdminsSite(name='admin_site')
 
-admin_site.register(Text)
-admin_site.register(String)
-admin_site.register(StringGroup)
-admin_site.register(Address)
-admin_site.register(CanadianAddress)
-# admin_site.register(Profile)
-admin_site.register(Form)
-admin_site.register(Survey)
-admin_site.register(MedicalLab)
-admin_site.register(TextElement)
-admin_site.register(QuestionGroup)
-admin_site.register(Question)
-admin_site.register(TextQuestion)
-admin_site.register(IntQuestion)
-admin_site.register(FloatQuestion)
-admin_site.register(IntRangeQuestion)
-admin_site.register(FloatRangeQuestion)
-admin_site.register(BooleanChoiceQuestion)
-admin_site.register(ExclusiveChoiceQuestion)
-admin_site.register(MultiChoiceQuestion)
-admin_site.register(Submission)
-admin_site.register(TextResponse)
-admin_site.register(IntResponse)
-admin_site.register(FloatResponse)
-admin_site.register(Indicator)
-admin_site.register(IntDataPoint)
-admin_site.register(FloatDataPoint)
+models = apps.get_models()
 
+for model in models:
+    try:
+        admin_site.register(model)
+    except admin.sites.AlreadyRegistered:
+        pass
+
+
+# Lab Tech Admin Site
 
 class LabTechSite(AdminSite):
     site_header = 'Lab Tech Administration'
@@ -44,5 +30,99 @@ class LabTechSite(AdminSite):
 
 lab_tech_site = LabTechSite(name='labtech_site')
 
+lab_tech_site.disable_action('delete_selected')
 
-lab_tech_site.register(Profile)
+
+@admin.register(Submission, site=lab_tech_site)
+class ProfileAdmin(admin.ModelAdmin):
+    exclude = ('flags', 'validated', 'parsed', 'processed')
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Profile, site=lab_tech_site)
+class ProfileAdmin(admin.ModelAdmin):
+    readonly_fields = ('user', 'first_name', 'middle_name', 'last_name', 'date_of_birth', 'gender', 'phone_number',
+                       'phone_number_alt', 'email', 'address', 'ec_first_name', 'ec_middle_name', 'ec_last_name',
+                       'ec_phone_number', 'physician', 'points', 'personal_message', 'profile_picture')
+    exclude = ('flags', 'password_flag', 'preferences')
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Form, site=lab_tech_site)
+class ProfileAdmin(admin.ModelAdmin):
+    readonly_fields = ('name', 'description', 'display', 'specification', 'analysis', 'tag', 'type')
+    exclude = ('flags', 'notes')
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Survey, site=lab_tech_site)
+class ProfileAdmin(admin.ModelAdmin):
+    readonly_fields = ('form', )
+    exclude = ('flags', 'prefix')
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(MedicalLab, site=lab_tech_site)
+class ProfileAdmin(admin.ModelAdmin):
+    readonly_fields = ('form', )
+    exclude = ('flags', 'prefix')
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Indicator, site=lab_tech_site)
+class ProfileAdmin(admin.ModelAdmin):
+    readonly_fields = ('name', 'description', 'display', 'specification', 'analysis', 'origin', 'type', 'good', 'max',
+                       'target', 'min', 'dynamic', 'categorizable', 'conversion')
+    exclude = ('flags', )
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(IntDataPoint, site=lab_tech_site)
+class ProfileAdmin(admin.ModelAdmin):
+    readonly_fields = ('name', 'description', 'time', 'validated', 'processed', 'user', 'indicator', 'value', 'source')
+    exclude = ('flags', )
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(FloatDataPoint, site=lab_tech_site)
+class ProfileAdmin(admin.ModelAdmin):
+    readonly_fields = ('name', 'description', 'time', 'validated', 'processed', 'user', 'indicator', 'value', 'source')
+    exclude = ('flags',)
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
