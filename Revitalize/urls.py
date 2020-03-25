@@ -19,17 +19,17 @@ router = routers.DefaultRouter()
 
 _new_patterns = []
 
-router.register('profile', ProfileRetrievalViewSet, basename='profile')
+router.register('profiles', ProfileRetrievalViewSet, basename='profile')
 
-router.register('lab-value', LabValueRetrievalViewSet, basename='lab-value')
+router.register('lab-values', LabValueRetrievalViewSet, basename='lab-value')
 
-router.register('survey-value', SurveyValueRetrievalViewSet, basename='survey-value')
+router.register('survey-values', SurveyValueRetrievalViewSet, basename='survey-value')
 
-router.register('indicator', IndicatorRetrievalViewSet, basename='indicator')
+router.register('indicators', IndicatorRetrievalViewSet, basename='indicator')
 
-router.register('indicator/survey', SurveyIndicatorRetrievalViewSet, basename='indicator-survey')
+router.register('indicators/survey', SurveyIndicatorRetrievalViewSet, basename='indicator-survey')
 
-router.register('indicator/lab-value', LabIndicatorRetrievalViewSet, basename='indicator-lab-value')
+router.register('indicators/lab-value', LabIndicatorRetrievalViewSet, basename='indicator-lab-value')
 
 router.register('surveys/user', UserSurveyHistoryViewSet, basename='survey')
 

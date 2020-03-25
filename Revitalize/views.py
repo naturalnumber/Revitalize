@@ -566,14 +566,24 @@ class UserSurveyHistoryViewSet(viewsets.ModelViewSet):
         #profile: Profile = self.request.user.profile
         return Submission.objects.filter(user=self.request.user, form__type=Form.FormType.SURVEY.value, processed=True)
 
+    @action(detail=False, methods=['GET', 'POST'])
+    def available(self, request, *args, **kwargs):
+        try:
+            user: User = request.user
+
+            serializer = AvailableSurveySerializer(user.get_available_surveys(), many=True)
+
+            to_send = Response(serializer.data, status=status.HTTP_201_CREATED)
+            if print_debug or print_debug2: print(to_send)
+            return to_send
+        except Exception as e:
+            if print_debug or print_debug2: print(e)
+            return _r(f"Could not find surveys ({e})", status.HTTP_400_BAD_REQUEST)
+
 
 class AvailableSurveyViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Survey.objects.all()
     serializer_class = AvailableSurveySerializer
-
-
-# TODO don't return Array
-# TODO fix with new name
 
 
 class UserIndicatorDataViewSet(viewsets.ModelViewSet):
