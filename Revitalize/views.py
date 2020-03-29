@@ -185,15 +185,31 @@ class DataPointRetrievalViewSet(viewsets.ModelViewSet):
             max_date: datetime = None
             if data is not None and 'min_date' in data.keys():
                 if print_debug: print(f"data['min_date'] = {data['min_date']}")
-                min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
-                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                # min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
+                #                                      time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                try:
+                    min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
+                                                         time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                except:
+                    try:
+                        min_date = timezone.datetime.fromisoformat(data['min_date']).replace(tzinfo=timezone.utc)
+                    except:
+                        min_date = None
 
                 ad_kwargs['time__gte']=min_date
 
             if data is not None and 'max_date' in data.keys():
                 if print_debug: print(f"data['max_date'] = {data['max_date']}")
-                max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
-                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                # max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
+                #                                      time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                try:
+                    max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
+                                                         time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                except:
+                    try:
+                        max_date = timezone.datetime.fromisoformat(data['max_date']).replace(tzinfo=timezone.utc)
+                    except:
+                        max_date = None
 
                 ad_kwargs['time__lte']=max_date
 
@@ -240,15 +256,31 @@ class DataPointRetrievalViewSet(viewsets.ModelViewSet):
             max_date: datetime = None
             if data is not None and 'min_date' in data.keys():
                 if print_debug: print(f"data['min_date'] = {data['min_date']}")
-                min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
-                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                # min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
+                #                                      time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                try:
+                    min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
+                                                         time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                except:
+                    try:
+                        min_date = timezone.datetime.fromisoformat(data['min_date']).replace(tzinfo=timezone.utc)
+                    except:
+                        min_date = None
 
                 q = q.filter(time__gte=min_date)
 
             if data is not None and 'max_date' in data.keys():
                 if print_debug: print(f"data['max_date'] = {data['max_date']}")
-                max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
-                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                # max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
+                #                                      time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                try:
+                    max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
+                                                         time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                except:
+                    try:
+                        max_date = timezone.datetime.fromisoformat(data['max_date']).replace(tzinfo=timezone.utc)
+                    except:
+                        max_date = None
 
                 q = q.filter(time__lte=max_date)
 
@@ -270,6 +302,154 @@ class DataPointRetrievalViewSet(viewsets.ModelViewSet):
         except Exception as e:
             if print_debug: print(e)
             return Response(_m(f"Could not access data ({e})"), status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['POST'])
+    def submit(self, request, pk=None):
+        if print_debug or print_debug2: print(f"Submission received for form #{pk}")
+        if print_debug: print(request)
+        if print_debug: print(dir(request))
+        if print_debug: print(request.data)
+        # SurveyViewSetFrontEnd.last_request = request
+        try:
+            if 'data' not in dir(request):
+                return _bad("Must provide submission data.")
+            if pk is None:
+                return _bad("No key provided.")
+
+            # Validate
+
+            # Check for replacement
+
+            if print_debug: print("check 1")
+
+            user = request.user  # TODO
+
+            if print_debug: print(user)
+
+            form = Form.objects.get(id=pk)
+            if print_debug: print(form)
+
+            submission_data = request.data
+            if print_debug or print_debug2: print(
+                f"submission_data = {submission_data} \n... {dict(submission_data)}")
+            if print_debug: print(type(submission_data))
+
+            if 'time' in dir(request):
+                time = request.data['time']
+            elif 'time' in submission_data:
+                time = submission_data['time']
+            else:
+                time = timezone.now()  # Django set to utc
+                # datetime.utcnow().replace(tzinfo=timezone.utc)  #
+            if print_debug: print(time)
+
+            if isinstance(submission_data, dict):
+                raw_data = json.dumps(submission_data)
+                if print_debug or print_debug2: print(f"dict -> raw_data = {raw_data}")
+            elif isinstance(submission_data, str):
+                raw_data = submission_data
+                if print_debug or print_debug2: print(f"str -> raw_data = {raw_data}")
+            else:
+                raw_data = submission_data
+                if print_debug or print_debug2: print(f"? -> raw_data = {raw_data}")
+
+            submission = Submission.objects.create(user=user, form=form, time=time, raw_data=raw_data)
+            if print_debug: print(submission)
+
+            try:
+                if print_debug or print_debug2: print('check 2')
+                submission.process(submission.r_validate())
+                if print_debug or print_debug2: print('check 3')
+            except ValidationError as e:
+                if print_debug or print_debug2: print(f"Validation: {e}")
+
+                try:
+                    if hasattr(e, 'rev_error_list') and \
+                            hasattr(e, 'rev_error_nums') and \
+                            hasattr(e, 'rev_error_elements'):
+                        errors = []
+                        errors_flat = []
+
+                        for error, n, group in zip(e.rev_error_list, e.rev_error_nums, e.rev_error_elements):
+                            # print(f"error = {error}, n = {n}, group = {group}")
+                            e_data = {
+                                    'position_in_form': n,
+                                    'group_data'      : group
+                            }
+
+                            _recursive_exception_parse(error, e_data)
+
+                            if hasattr(error, 'rev_error_list') and \
+                                    hasattr(error, 'rev_error_nums') and \
+                                    hasattr(error, 'rev_error_questions'):
+                                q_errors = []
+                                for q_error, q_n, question in zip(error.rev_error_list,
+                                                                  error.rev_error_nums,
+                                                                  error.rev_error_questions):
+                                    # print(f"q_error = {q_error}, q_n = {q_n}, question = {question}")
+                                    question: dict
+                                    qe_data = {
+                                            'position_in_form'   : n,
+                                            'group_data'         : group,
+                                            'position_in_element': q_n,
+                                            'question_data'      : question
+                                    }
+
+                                    _recursive_exception_parse(q_error, qe_data)
+
+                                    _transfer_valid(qe_data, question, {'number': 'question_number'})
+                                    _transfer_valid(qe_data, question, ['id', 'response'])
+                                    _transfer_valid(qe_data, group, {'number': 'group_number', 'id': 'group_id'})
+                                    _transfer_valid(qe_data, group, ['element_type',
+                                                                     'question_group_type',
+                                                                     'question_group_type_data'])
+
+                                    q_errors.append(qe_data)
+                                    errors_flat.append(qe_data)
+
+                                if len(q_errors) > 0: e_data['questions'] = q_errors
+
+                            errors.append(e_data)
+
+                        response = {
+                                'message': _("Submission could not be validated."),
+                                'errors' : errors_flat
+                        }
+                        return Response(response, status=status.HTTP_400_BAD_REQUEST)
+                except Exception as ex:
+                    # print(ex) # TODO
+                    pass
+
+                return _r(f"Could not validate submission ({e})", status.HTTP_400_BAD_REQUEST)
+
+            # acs: 'QuerySet' = user.profile.all_completed_surveys()
+            # for sub in acs:
+            #     print(SubmissionSerializer(sub, many=False).data)
+
+            serializer = SubmissionSerializer(submission, many=False)
+
+            response = {'message': 'Submission received', 'result': serializer.data}
+
+            if print_debug: print(f"status.HTTP_201_CREATED = {status.HTTP_201_CREATED}")
+            to_send = Response(response, status=status.HTTP_201_CREATED)
+            if print_debug or print_debug2: print(to_send)
+            return to_send
+        except Exception as e:
+            if print_debug or print_debug2: print(e)
+            return _r(f"Could not parse submission ({e})", status.HTTP_400_BAD_REQUEST)
+
+    #@action(detail=True, methods=['POST', 'GET'])
+    def retrieve(self, request, pk=None, *args, **kwargs):
+        set: QuerySet = Form.objects.filter(type=Form.FormType.SURVEY.value)
+        form: Form = set.get(pk=pk)
+
+        serializer = FormSerializerDisplay(form, many=False)
+
+        to_send = Response(serializer.data, status=status.HTTP_200_OK)
+        # to_send = Response(_m('No Data Found'), status=status.HTTP_200_OK)
+
+        if print_debug: print(to_send)
+        return to_send
 
 
 class LabValueRetrievalViewSet(DataPointRetrievalViewSet):
@@ -350,15 +530,31 @@ class IndicatorRetrievalViewSet(viewsets.ModelViewSet):
             max_date: datetime = None
             if data is not None and 'min_date' in data.keys():
                 if print_debug: print(f"data['min_date'] = {data['min_date']}")
-                min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
-                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                # min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
+                #                                      time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                try:
+                    min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
+                                                         time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                except:
+                    try:
+                        min_date = timezone.datetime.fromisoformat(data['min_date']).replace(tzinfo=timezone.utc)
+                    except:
+                        min_date = None
 
                 ad_kwargs['time__gte']=min_date
 
             if data is not None and 'max_date' in data.keys():
                 if print_debug: print(f"data['max_date'] = {data['max_date']}")
-                max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
-                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                # max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
+                #                                      time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                try:
+                    max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
+                                                         time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                except:
+                    try:
+                        max_date = timezone.datetime.fromisoformat(data['max_date']).replace(tzinfo=timezone.utc)
+                    except:
+                        max_date = None
 
                 ad_kwargs['time__lte']=max_date
 
@@ -719,12 +915,28 @@ class UserIndicatorViewSet(viewsets.ModelViewSet):
             max_date: datetime = None
             if 'min_date' in data.keys():
                 if print_debug: print(f"data['min_date'] = {data['min_date']}")
-                min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
-                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                # min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
+                #                                      time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                try:
+                    min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
+                                                         time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                except:
+                    try:
+                        min_date = timezone.datetime.fromisoformat(data['min_date']).replace(tzinfo=timezone.utc)
+                    except:
+                        min_date = None
             if 'max_date' in data.keys():
                 if print_debug: print(f"data['max_date'] = {data['max_date']}")
-                max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
-                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                # max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
+                #                                      time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                try:
+                    max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
+                                                         time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                except:
+                    try:
+                        max_date = timezone.datetime.fromisoformat(data['max_date']).replace(tzinfo=timezone.utc)
+                    except:
+                        max_date = None
 
             indicators: QuerySet = Indicator.objects.filter(float_data_points__user=user).distinct().all()\
                 .union(Indicator.objects.filter(int_data_points__user=user).distinct().all())
@@ -897,12 +1109,25 @@ class UserSurveyIndicatorViewSet(viewsets.ModelViewSet):
             max_date: datetime = None
             if 'min_date' in data.keys():
                 if print_debug: print(f"data['min_date'] = {data['min_date']}")
-                min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
-                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                try:
+                    min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
+                                                         time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                except:
+                    try:
+                        min_date = timezone.datetime.fromisoformat(data['min_date']).replace(tzinfo=timezone.utc)
+                    except:
+                        min_date = None
+
             if 'max_date' in data.keys():
                 if print_debug: print(f"data['max_date'] = {data['max_date']}")
-                max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
-                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                try:
+                    max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
+                                                         time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                except:
+                    try:
+                        max_date = timezone.datetime.fromisoformat(data['max_date']).replace(tzinfo=timezone.utc)
+                    except:
+                        max_date = None
 
             indicators: QuerySet = Indicator.objects.filter(float_data_points__user=user, origin=Indicator.OriginType.SURVEY.value).distinct().all()\
                 .union(Indicator.objects.filter(int_data_points__user=user, origin=Indicator.OriginType.SURVEY.value).distinct().all())
@@ -1071,12 +1296,28 @@ class UserLabIndicatorViewSet(viewsets.ModelViewSet):
             max_date: datetime = None
             if 'min_date' in data.keys():
                 if print_debug: print(f"data['min_date'] = {data['min_date']}")
-                min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
-                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                # min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
+                #                                      time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                try:
+                    min_date = timezone.datetime.combine(date.fromisoformat(data['min_date']),
+                                                         time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                except:
+                    try:
+                        min_date = timezone.datetime.fromisoformat(data['min_date']).replace(tzinfo=timezone.utc)
+                    except:
+                        min_date = None
             if 'max_date' in data.keys():
                 if print_debug: print(f"data['max_date'] = {data['max_date']}")
-                max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
-                                                     time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                # max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
+                #                                      time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                try:
+                    max_date = timezone.datetime.combine(date.fromisoformat(data['max_date']),
+                                                         time(hour=0, minute=0, second=0)).replace(tzinfo=timezone.utc)
+                except:
+                    try:
+                        max_date = timezone.datetime.fromisoformat(data['max_date']).replace(tzinfo=timezone.utc)
+                    except:
+                        max_date = None
 
             indicators: QuerySet = Indicator.objects.filter(float_data_points__user=user, origin=Indicator.OriginType.LAB.value).distinct().all()\
                 .union(Indicator.objects.filter(int_data_points__user=user, origin=Indicator.OriginType.LAB.value).distinct().all())
