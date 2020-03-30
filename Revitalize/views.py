@@ -124,7 +124,7 @@ def _parse_datetime(data: dict, key: str = None) -> datetime:
                 return parsed_date
 
             try:
-                parsed_date = timezone.datetime.strptime(value, '%Y-%m-%dT%H:%M:%SZ')
+                parsed_date = timezone.datetime.strptime(value, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
             except:
                 parsed_date = None
 
