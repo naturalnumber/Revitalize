@@ -941,17 +941,20 @@ class ProfileRetrievalSerializer(serializers.ModelSerializer):
     def get_height(self, p: Profile):
         value = None
         try:
-            indicator: Indicator = Indicator.objects.filter(name__value="Height")[0]
-            value = indicator.data_class().objects.filter(indicator=indicator, user=p.user.id).latest()
-        except:
+            indicator: Indicator = Indicator.objects.get(name__value="Height")
+            point: FloatDataPoint = indicator.data_class().objects.filter(indicator=indicator, user=p.user.id).latest('time')
+            value = point.value
+        except Exception as e:
+            print(e)
             pass
         return value
 
     def get_weight(self, p: Profile):
         value = None
         try:
-            indicator: Indicator = Indicator.objects.filter(name__value="Weight")[0]
-            value = indicator.data_class().objects.filter(indicator=indicator, user=p.user.id).latest()
+            indicator: Indicator = Indicator.objects.get(name__value="Weight")
+            point: FloatDataPoint = indicator.data_class().objects.filter(indicator=indicator, user=p.user.id).latest('time')
+            value = point.value
         except:
             pass
         return value
