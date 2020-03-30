@@ -31,7 +31,7 @@ router.register('profiles', ProfileRetrievalViewSet, basename='profile')
 # 	POST -> {min_date, max_date} filtered version
 router.register('lab-values', LabValueRetrievalViewSet, basename='lab-value') # LabValueRetrievalViewSet
 
-router.register('surveys', SurveyValueRetrievalViewSet, basename='survey-value') # SurveyValueRetrievalViewSet
+router.register('survey-values', SurveyValueRetrievalViewSet, basename='survey-value') # SurveyValueRetrievalViewSet
 
 router.register('indicators', IndicatorRetrievalViewSet, basename='indicator')
 
@@ -56,7 +56,7 @@ router.register('indicators/lab-value', LabIndicatorRetrievalViewSet, basename='
 router.register('surveys/user', UserSurveyHistoryViewSet, basename='survey') # UserSurveyHistoryViewSet
 
 #  apiCall(`/surveys/${surveyId}/`, { method: 'GET'}) // get survey JSON
-# router.register('surveys', SurveyViewSetFrontEnd, basename='survey')
+router.register('surveys', SurveyViewSetFrontEnd, basename='survey')
 router.register('available_surveys', AvailableSurveyViewSet, basename='available_survey')
 router.register('survey_history', UserSurveyHistoryViewSet, basename='survey_submission')
 router.register('profile_retrieval', ProfileRetrievalViewSet, basename='profile_retrieval')
