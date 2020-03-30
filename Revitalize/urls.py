@@ -61,14 +61,14 @@ router.register('available_surveys', AvailableSurveyViewSet, basename='available
 router.register('survey_history', UserSurveyHistoryViewSet, basename='survey_submission')
 router.register('profile_retrieval', ProfileRetrievalViewSet, basename='profile_retrieval')
 
-router.register('lab_values', LabValueViewSet, basename='lab_values')
-
-router.register('user_indicators', UserIndicatorViewSet, basename='user_indicator')
-
-router.register('user_indicator_data', UserIndicatorDataViewSet, basename='user_indicator_data')
-
-router.register('user_survey_indicators', UserSurveyIndicatorViewSet, basename='user_survey_indicator')
-router.register('user_lab_indicators', UserLabIndicatorViewSet, basename='user_lab_indicator')
+# router.register('lab_values', LabValueViewSet, basename='lab_values')
+#
+# router.register('user_indicators', UserIndicatorViewSet, basename='user_indicator')
+#
+# router.register('user_indicator_data', UserIndicatorDataViewSet, basename='user_indicator_data')
+#
+# router.register('user_survey_indicators', UserSurveyIndicatorViewSet, basename='user_survey_indicator')
+# router.register('user_lab_indicators', UserLabIndicatorViewSet, basename='user_lab_indicator')
 
 
 
