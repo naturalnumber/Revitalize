@@ -8,7 +8,7 @@ set -o pipefail
 echo "Generating Test Users"
 
 echo "
-from django.contrib.auth.models import User;
+from Revitalize.models import User;
 passTemp = User.objects.make_random_password(15)
 print(passTemp);
 user = User.objects.create_user('TesterOne', User.objects.normalize_email('one@tesTer.com'), passTemp);
@@ -30,6 +30,9 @@ user.save();
 user = User.objects.create_user('TesterFive', 'five@tester.com','test1234');
 user.first_name = 'Five';
 user.last_name = 'Five';
+user.save();
+user = User.objects.create_superuser('labtech', '', 'cs4820');
+user.is_lab_tech = True;
 user.save();" | python $PWD/manage.py shell
 
 echo "Created Test Users 1, 2, 3, 4, 5"
