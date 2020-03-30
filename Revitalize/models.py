@@ -6,7 +6,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.db.migrations.serializer import DictionarySerializer
 from django.db.models.query import QuerySet
-from django.utils.translation import gettext_lazy as _ # TODO gettext_lazy
+from django.utils.translation import gettext as _ # TODO gettext_lazy
 from rest_framework.exceptions import ValidationError
 from rest_framework.utils import json
 
@@ -17,14 +17,13 @@ from Revitalize.data_analysis_system import DataAnalysisSystem
 
 print_debug = False
 
-print_debug_a = False
+print_debug_a = True
 
 print_test_data = False
 
 
 class User(AbstractUser):
-    def get_available_surveys(self):
-        return Survey.objects.all()
+    is_lab_tech = models.BooleanField(default=False)
 
 
 def validate_json(j: str):
@@ -2841,7 +2840,6 @@ class Indicator(Analysable):
             info['min'] = self.min
             info['target'] = self.target
             info['goal_message'] = self.get_goal_message()
-            info['unit'] = self.unit
         else:
             # TODO
             pass
@@ -2859,7 +2857,6 @@ class Indicator(Analysable):
             info['min'] = self.min
             info['target'] = self.target
             info['goal_message'] = self.get_goal_message()
-            info['unit'] = self.unit
         else:
             # TODO
             pass

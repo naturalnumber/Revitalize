@@ -10,10 +10,12 @@ from Revitalize.models import *
 class AdminsSite(AdminSite):
     site_header = 'Admin Administration'
 
-    # # TODO: get is_labtech boolean in abstract users so labtechs cant access main admin site
-    # def has_permission(self, request):
-    #
-    #     return (not request.user.is_labtech) and request.user.is_active and request.user.is_staff
+    def has_permission(self, request):
+
+        if request.user.is_anonymous:
+            return request.user.is_active and request.user.is_staff
+        else:
+            return (not request.user.is_lab_tech) and request.user.is_active and request.user.is_staff
 
 
 admin_site = AdminsSite(name='admin_site')
