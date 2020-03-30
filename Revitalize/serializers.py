@@ -928,10 +928,33 @@ class AvailableSurveySerializer(serializers.ModelSerializer):
 
 class ProfileRetrievalSerializer(serializers.ModelSerializer):
     address = AddressSerializer(many=False)
+    height = serializers.SerializerMethodField()
+    weight = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
-        fields = ['id', 'first_name', 'middle_name', 'last_name', 'date_of_birth', 'gender', 'phone_number', 'phone_number_alt', 'email', 'address', 'ec_first_name', 'ec_middle_name', 'ec_last_name', 'ec_phone_number', 'physician', 'points', 'personal_message', 'profile_picture', 'password_flag', 'preferences']
+        fields = ['id', 'first_name', 'middle_name', 'last_name', 'date_of_birth', 'gender', 'phone_number',
+                  'phone_number_alt', 'email', 'address', 'ec_first_name', 'ec_middle_name', 'ec_last_name',
+                  'ec_phone_number', 'physician', 'points', 'personal_message', 'profile_picture', 'password_flag',
+                  'preferences', 'height', 'weight']
+
+    def get_height(self, p: Profile):
+        value = None
+        try:
+            indicator: Indicator = Indicator.objects.filter(name__value="Height")[0]
+            value = indicator.data_class().objects.filter(indicator=indicator, user=p.user.id).latest()
+        except:
+            pass
+        return value
+
+    def get_weight(self, p: Profile):
+        value = None
+        try:
+            indicator: Indicator = Indicator.objects.filter(name__value="Weight")[0]
+            value = indicator.data_class().objects.filter(indicator=indicator, user=p.user.id).latest()
+        except:
+            pass
+        return value
 
 
 class UserIndicatorSerializer(serializers.ModelSerializer):

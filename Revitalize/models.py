@@ -15,7 +15,7 @@ from Revitalize.data_analysis_system import DataAnalysisSystem
 #def _(s): # TODO
 #    return s
 
-print_debug = False
+print_debug = True
 
 print_debug_a = True
 
@@ -24,6 +24,10 @@ print_test_data = False
 
 class User(AbstractUser):
     is_lab_tech = models.BooleanField(default=False)
+
+    def get_available_surveys(self):
+        return Survey.objects.all()
+        #return Form.objects.filter(type=Form.FormType.SURVEY.value)
 
 
 def validate_json(j: str):

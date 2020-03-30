@@ -33,7 +33,7 @@ router.register('lab-values', LabValueRetrievalViewSet, basename='lab-value') # 
 
 router.register('survey-values', SurveyValueRetrievalViewSet, basename='survey-value') # SurveyValueRetrievalViewSet
 
-router.register('indicators', IndicatorRetrievalViewSet, basename='indicator')
+#router.register('indicators', IndicatorRetrievalViewSet, basename='indicator')
 
 #  apiCall('/indicators/survey/user/', { method: 'GET' }) // get all survey indicators for user (to select which one to graph)
 #  apiCall(`/indicators/survey/${change.selector}/user/`, { method: 'POST', body: range }) // get graph data for survey indicators
@@ -57,9 +57,9 @@ router.register('surveys/user', UserSurveyHistoryViewSet, basename='survey') # U
 
 #  apiCall(`/surveys/${surveyId}/`, { method: 'GET'}) // get survey JSON
 router.register('surveys', SurveyViewSetFrontEnd, basename='survey')
-router.register('available_surveys', AvailableSurveyViewSet, basename='available_survey')
-router.register('survey_history', UserSurveyHistoryViewSet, basename='survey_submission')
-router.register('profile_retrieval', ProfileRetrievalViewSet, basename='profile_retrieval')
+# router.register('available_surveys', AvailableSurveyViewSet, basename='available_survey')
+# router.register('survey_history', UserSurveyHistoryViewSet, basename='survey_submission')
+# router.register('profile_retrieval', ProfileRetrievalViewSet, basename='profile_retrieval')
 
 # router.register('lab_values', LabValueViewSet, basename='lab_values')
 #
