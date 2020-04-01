@@ -4,7 +4,8 @@ from rest_framework import serializers
 from rest_framework.serializers import ListSerializer
 
 from Revitalize.models import *
-from Revitalize.models import _str
+from Revitalize.language_support import database_to_string as _str
+from Revitalize.utils import ModelHelper
 
 
 class UserSerializer(serializers.ModelSerializer):
