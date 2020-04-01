@@ -20,18 +20,24 @@ router = routers.DefaultRouter()
 
 _new_patterns = []
 
-#  apiCall('/profiles/user/', {method: 'GET'}) // get user profile
 # profile/user/ -> retrieve the profile for a single user
 router.register('profiles', ProfileRetrievalViewSet, basename='profile')
 
-#  apiCall('/lab-values/user/', { method: 'GET' }) // get lab value history (should this be /indicators/lab-value/user/?
-# lab-value/user/ -> retrieve all lab values associated with a user in format: [{name: 'Weight", value: 120, unit: 'lb', submission_date: 32412341234}, {name: 'Weight', value: 125', unit: 'lb', submission_date:  3424324}]
-# lab-value/id/user/ -> retrieve all lab values of a certain id for a user in format: [{name: 'Weight", value: 120, submission_date: 32412341234}, {name: 'Weight', value: 125', submission_date:  3424324}]
+#  values/user/ -> retrieve all data values associated with a user in format:
+#  survey-values/user/ -> retrieve all survey values associated with a user in format:
+#  lab-values/user/ -> retrieve all lab values associated with a user in format:
+#       [{name: 'Weight", value: 120, unit: 'lb', submission_date: 32412341234},
+#        {name: 'Weight', value: 125', unit: 'lb', submission_date:  3424324}]
+#  values/id/user/ -> retrieve all data values of a certain id for a user in format:
+#  survey-values/id/user/ -> retrieve all survey values of a certain id for a user in format:
+#  lab-values/id/user/ -> retrieve all lab values of a certain id for a user in format:
+#       [{name: 'Weight", value: 120, submission_date: 32412341234},
+#        {name: 'Weight', value: 125', submission_date:  3424324}]
 # 	GET -> all lab values associated with an id and user (history)
 # 	POST -> {min_date, max_date} filtered version
-router.register('lab-values', LabValueRetrievalViewSet, basename='lab-value') # LabValueRetrievalViewSet
-
-router.register('survey-values', SurveyValueRetrievalViewSet, basename='survey-value') # SurveyValueRetrievalViewSet
+router.register('data-values', LabValueRetrievalViewSet, basename='data-value')
+router.register('lab-values', LabValueRetrievalViewSet, basename='lab-value')
+router.register('survey-values', SurveyValueRetrievalViewSet, basename='survey-value')
 
 #router.register('indicators', IndicatorRetrievalViewSet, basename='indicator')
 

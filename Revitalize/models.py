@@ -4,16 +4,20 @@ from json import JSONDecodeError
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 from django.db import models
-from django.db.migrations.serializer import DictionarySerializer
 from django.db.models.query import QuerySet
-from django.utils.translation import gettext as _ # TODO gettext_lazy
+from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 from rest_framework.utils import json
 
 from Revitalize.data_analysis_system import DataAnalysisSystem
 
-#def _(s): # TODO
-#    return s
+import logging
+
+from Revitalize.typing import Numeric, DataPoint
+
+logger = logging.getLogger(__name__)
+_context = 'models.'
+_tracing = True
 
 print_debug = True
 
@@ -21,13 +25,39 @@ print_debug_a = True
 
 print_test_data = False
 
-
 class User(AbstractUser):
     is_lab_tech = models.BooleanField(default=False)
 
-    def get_available_surveys(self):
+    def get_available_surveys(self) -> QuerySet:
         return Survey.objects.all()
-        #return Form.objects.filter(type=Form.FormType.SURVEY.value)
+
+    def get_point_sets(self, point_data_types: list = None, *args, **kwargs):
+        __method = _context + self.__class__.__name__ + '.' + 'get_point_sets'
+        if _tracing: logger.info(__method + f"({point_data_types}, {kwargs})")
+
+        q: QuerySet
+        point_q_sets = []
+
+        if point_data_types is None or Indicator.DataType.INT.value in point_data_types:
+            point_q_sets.append(IntDataPoint.objects.filter(user=self, **kwargs))
+        if point_data_types is None or Indicator.DataType.FLOAT.value in point_data_types:
+            point_q_sets.append(FloatDataPoint.objects.filter(user=self, **kwargs))
+
+        return point_q_sets
+
+    def get_data_points(self, point_data_types: list = None, *args, **kwargs) -> QuerySet:
+        __method = _context + self.__class__.__name__ + '.' + 'get_data_points'
+        if _tracing: logger.info(__method + f"({kwargs})")
+
+        point_q_sets: list = self.get_point_sets(point_data_types=point_data_types, **kwargs)
+
+        points: QuerySet = None
+        for q in point_q_sets:
+            q: QuerySet
+            if points is None:
+                points = q
+            points = points.union(q)
+        return points
 
 
 def validate_json(j: str):
@@ -42,6 +72,7 @@ def pre_validate_json(j: str):
         return json.loads(j)
     except JSONDecodeError as e:
         raise ValidationError(e)
+
 
 class LangCode(models.TextChoices):
     UNKNOWN = '?', _('Unknown')
@@ -471,6 +502,25 @@ class Profile(ModelBase):
     def submitted_surveys(self, id):
         return Submission.objects.filter(user=self.user, form__surveys__id=id)
 
+    def get_indicator(self, name: str) -> Numeric:
+        __method = _context + self.__class__.__name__ + '.' + 'get_indicator'
+        if _tracing: logger.info(__method + f"({name})")
+
+        value = None
+        try:
+            indicator: Indicator = Indicator.get_by_name(name=name)
+            point: FloatDataPoint = indicator.data_points().filter(user=self.user).latest('time')
+            value = point.value
+        except Exception as e:
+            logger.warning(__method + f": error {e} with {self}")
+        return value
+
+    def get_height(self) -> float:
+        return self.get_indicator("Height")
+
+    def get_weight(self) -> float:
+        return self.get_indicator("Weight")
+
 
 class Notable(ModelBase):
     _name = 'Notable'  # internal name
@@ -883,7 +933,7 @@ class Form(Analysable):
 
         self._verify_key(data, 'elements', 'submission', self.id)
 
-        groups = self.question_groups.order_by('number').all()
+        groups = self.question_groups.order_by('number').all_indicators()
 
         if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse groups: {groups}")
 
@@ -985,7 +1035,7 @@ class Form(Analysable):
         if "elements" not in data.keys():
             raise KeyError(f"Key 'elements' for {self} not present")
 
-        groups = self.question_groups.order_by('number').all()
+        groups = self.question_groups.order_by('number').all_indicators()
 
         if print_debug: print(f"\trespond groups: {groups}")
 
@@ -1057,7 +1107,7 @@ class Form(Analysable):
 
         translation = {'questions' : {'all' : {}}}
 
-        groups = self.question_groups.order_by('number').all()
+        groups = self.question_groups.order_by('number').all_indicators()
 
         if print_debug: print(f"\trespond groups: {groups}")
 
@@ -1354,7 +1404,7 @@ class QuestionGroup(FormElement):
         if print_debug: print(f"{self.__class__.__name__}._fetch_questions( ... ) for {self}")
 
         try:
-            questions = self.questions.order_by('number').all()
+            questions = self.questions.order_by('number').all_indicators()
         except Exception as e:
             if m is None:
                 m = self.number
@@ -2792,10 +2842,10 @@ class Indicator(Analysable):
 
     ModelHelper.register(_name, 'type', 85, to_filter=True, to_search=True)
 
-    def is_int(self):
+    def is_int(self) -> bool:
         return self.type == self.DataType.INT.value
 
-    def is_float(self):
+    def is_float(self) -> bool:
         return self.type == self.DataType.FLOAT.value
 
     def validate(self, value):
@@ -2813,6 +2863,13 @@ class Indicator(Analysable):
             return IntDataPoint
         elif self.is_float():
             return FloatDataPoint
+        return None
+
+    def data_points(self) -> QuerySet:
+        if self.is_int():
+            return self.int_data_points
+        elif self.is_float():
+            return self.float_data_points
         return None
 
     @property
@@ -2866,6 +2923,11 @@ class Indicator(Analysable):
             pass
 
         return info  # json.dumps(info)
+
+    @staticmethod
+    def get_by_name(name: str):
+        indicator: Indicator = Indicator.objects.get(name__value__iexact=name)
+        return indicator
 
 
 class IndicatorDataPoint(Nameable):

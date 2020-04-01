@@ -631,7 +631,7 @@ class QuestionGroupSerializerDisplay(serializers.ModelSerializer):
         return qg.questions.count()
 
     def get_questions(self, qg: QuestionGroup):
-        questions = sorted(Question.objects.filter(group=qg.pk).all(), key= lambda q: q.number)
+        questions = sorted(Question.objects.filter(group=qg.pk).all_indicators(), key= lambda q: q.number)
         ser = QuestionSerializerDisplay(questions, many=True)
         return ser.data
 
@@ -681,10 +681,10 @@ class FormSerializerDisplay(serializers.ModelSerializer):
         return _str(n.description)
 
     def get_elements(self, f: Form):
-        elements = sorted(chain(f.text_elements.order_by('number').all(),
-                             f.question_groups.order_by('number').all()),
-                       key=lambda e: e.number
-                       )
+        elements = sorted(chain(f.text_elements.order_by('number').all_indicators(),
+                                f.question_groups.order_by('number').all_indicators()),
+                          key=lambda e: e.number
+                          )
 
         # print(elements)
 
@@ -757,12 +757,12 @@ class SurveySerializerDisplay(serializers.ModelSerializer):
 
         elements = []
 
-        text_elements = f.text_elements.order_by('number').all()
+        text_elements = f.text_elements.order_by('number').all_indicators()
 
         for te in text_elements:
             elements.append((te.number, TextElementSerializerDisplay(te, many=False)))
 
-        question_groups = f.question_groups.order_by('number').all()
+        question_groups = f.question_groups.order_by('number').all_indicators()
 
         for qg in question_groups:
             elements.append((qg.number, QuestionGroupSerializerDisplay(qg, many=False)))
@@ -938,26 +938,11 @@ class ProfileRetrievalSerializer(serializers.ModelSerializer):
                   'ec_phone_number', 'physician', 'points', 'personal_message', 'profile_picture', 'password_flag',
                   'preferences', 'height', 'weight']
 
-    def get_height(self, p: Profile):
-        value = None
-        try:
-            indicator: Indicator = Indicator.objects.get(name__value="Height")
-            point: FloatDataPoint = indicator.data_class().objects.filter(indicator=indicator, user=p.user.id).latest('time')
-            value = point.value
-        except Exception as e:
-            print(e)
-            pass
-        return value
+    def get_height(self, p: Profile) -> float:
+        return p.get_height()
 
-    def get_weight(self, p: Profile):
-        value = None
-        try:
-            indicator: Indicator = Indicator.objects.get(name__value="Weight")
-            point: FloatDataPoint = indicator.data_class().objects.filter(indicator=indicator, user=p.user.id).latest('time')
-            value = point.value
-        except:
-            pass
-        return value
+    def get_weight(self, p: Profile) -> float:
+        return p.get_weight()
 
 
 class UserIndicatorSerializer(serializers.ModelSerializer):
