@@ -506,14 +506,21 @@ class Profile(ModelBase):
         __method = _context + self.__class__.__name__ + '.' + 'get_indicator'
         if _tracing: logger.info(__method + f"({name})")
 
-        value = None
         try:
             indicator: Indicator = Indicator.get_by_name(name=name)
+
+            if indicator is None:
+                return None
+
             point: FloatDataPoint = indicator.data_points().filter(user=self.user).latest('time')
-            value = point.value
+
+            if point is None:
+                return None
+
+            return point.value
         except Exception as e:
             logger.warning(__method + f": error {e} with {self}")
-        return value
+        return None
 
     def get_height(self) -> float:
         return self.get_indicator("Height")
@@ -2924,9 +2931,14 @@ class Indicator(Analysable):
 
         return info  # json.dumps(info)
 
-    @staticmethod
-    def get_by_name(name: str):
+    @classmethod
+    def get_by_name(cls, name: str) -> 'Indicator':
+        __method = _context + cls.__name__ + '.' + 'get_by_name'
+        if _tracing: logger.info(__method + f"({name})")
+
         indicator: Indicator = Indicator.objects.get(name__value__iexact=name)
+        if indicator is None:
+            logger.warning(__method + f": unable to find indicator '{name}'")
         return indicator
 
 
