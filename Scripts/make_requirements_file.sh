@@ -14,7 +14,7 @@ then
     [ -f "${PWD}/requirements.txt" ] && mv $PWD/requirements.txt $PWD/requirements.txt.backup
 fi
 
-pip freeze -l > $PWD/requirements.txt
+pip freeze -l | grep -v "pkg-resources" > $PWD/requirements.txt
 
 echo "Requirements file updated."
 head $PWD/requirements.txt

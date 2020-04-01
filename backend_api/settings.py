@@ -51,6 +51,8 @@ MIDDLEWARE = [
         'django.contrib.messages.middleware.MessageMiddleware',
         'django.middleware.clickjacking.XFrameOptionsMiddleware',
         'corsheaders.middleware.CorsMiddleware',
+        'django.middleware.common.BrokenLinkEmailsMiddleware',
+        'django.middleware.common.CommonMiddleware'
 ]
 
 ROOT_URLCONF = 'backend_api.urls'
@@ -93,7 +95,11 @@ REST_FRAMEWORK = {
         ),
         'DEFAULT_PERMISSION_CLASSES': [
             'rest_framework.permissions.IsAuthenticated',
-        ]
+        ],
+#        'DEFAULT_PARSER_CLASSES': (
+#            'rest_framework.parsers.FormParser',
+#            'rest_framework.parsers.MultiPartParser'
+#         )
 }
 
 # Password validation
@@ -114,6 +120,9 @@ AUTH_PASSWORD_VALIDATORS = [
         },
 ]
 
+AUTH_PROFILE_MODULE = 'Revitalize.Profile'
+AUTH_USER_MODEL = 'Revitalize.User'
+
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
 
@@ -128,6 +137,8 @@ USE_L10N = True
 USE_TZ = True
 
 # CORS
+# CORS_ORIGIN_ALLOW_ALL = True
+
 CORS_ORIGIN_WHITELIST = [
         'http://localhost:3000',
 ]
@@ -144,4 +155,23 @@ STATIC_URL = '/static/'
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+}
+
+# profile picture
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
 }

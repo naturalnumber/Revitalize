@@ -18,6 +18,12 @@
           <option value="Revitalize.models.ResponseType.submission" />
           <option value="Revitalize.models.ResponseType.question" />
           <option value="Scripts.load_surveys.surveys" />
+          <option value="Revitalize.models.FormElement.element_type" />
+          <option value="analysis_helper.*" />
+          <option value="rest_framework.exceptions.ValidationError.rev_error_nums" />
+          <option value="rest_framework.exceptions.ValidationError.rev_error_list" />
+          <option value="rest_framework.exceptions.ValidationError.*" />
+          <option value="Revitalize.models.Processable.value" />
         </list>
       </option>
     </inspection_tool>
