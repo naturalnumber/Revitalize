@@ -19,6 +19,7 @@ from django.urls import include, path
 from rest_framework_simplejwt.views import (TokenObtainPairView, TokenRefreshView)
 
 # profile picture
+from Revitalize.views import signup_view, home_view
 from . import settings
 from django.contrib.staticfiles.urls import static
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
@@ -27,6 +28,8 @@ urlpatterns = [
         path('admin/', admin_site.urls),
         path('labtech/', lab_tech_site.urls),
         path('api/', include('Revitalize.urls')),
+        path('', home_view, name="home"),
+        path('signup/', signup_view, name="signup"),
         # TODO could these be put in the Revitalize urls.py?
         # Authentication : https://github.com/davesque/django-rest-framework-simplejwt
         path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),

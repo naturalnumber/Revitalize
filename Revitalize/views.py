@@ -1,4 +1,7 @@
+from django.contrib.auth import authenticate, login, get_user_model
+from django.contrib.auth.forms import UserCreationForm
 from django.db.models.query import QuerySet
+from django.shortcuts import render, redirect
 from django.utils.datetime_safe import datetime, date, time
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -10,6 +13,8 @@ from Revitalize.serializers import *
 from django.utils import timezone
 from Revitalize.utils import recursive_exception_parse, parse_datetime
 import logging
+
+User = get_user_model()
 
 logger = logging.getLogger(__name__)
 _context = 'views.'
@@ -78,6 +83,26 @@ def _limit_values(q: QuerySet, from_data: dict, default: int = 100) -> QuerySet:
         return q[:max_values]
     else:
         return q.all()
+
+# User Sign Up
+
+
+def home_view(request):
+    return render(request, 'home.html')
+
+
+def signup_view(request):
+    form = UserCreationForm(request.POST)
+    if form.is_valid():
+        form.save()
+        username = form.cleaned_data.get('username')
+        password = form.cleaned_data.get('password1')
+        user = authenticate(username=username, password=password)
+        login(request, user)
+        return redirect('home')
+    return render(request, 'signup.html', {'form': form})
+
+# User Sign Up End
 
 
 class BaseViewSet(viewsets.ModelViewSet):

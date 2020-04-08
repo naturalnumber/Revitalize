@@ -27,6 +27,7 @@ print_debug_a = True
 
 print_test_data = False
 
+
 class User(AbstractUser):
     is_lab_tech = models.BooleanField(default=False)
 
