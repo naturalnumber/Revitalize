@@ -20,6 +20,7 @@ from Revitalize.validation import validate_json
 logger = logging.getLogger(__name__)
 _context = 'models.'
 _tracing = True
+_print_dicts = True
 
 print_debug = True
 
@@ -185,7 +186,10 @@ class ModelBase(models.Model):
     ModelHelper.register(_name, 'update_time', 5, to_filter=True, to_serialize=False)
 
     def _verify_key(self, data: dict, key: str, name: str = None, n: int = None, nonfatal: bool = None) -> bool:
-        if print_debug: print(f"{self.__class__.__name__}._verify_key( ... ) for {self}")
+        __method = _context + self.__class__.__name__ + '.' + '_verify_key'
+        if _tracing:
+            logger.info(__method + f"(data, {key}, {name}, {n}, {nonfatal}) for {self}")
+            if _print_dicts: logger.info(__method + f": data = {data}")
 
         # self is context for error message
         if key not in data.keys():
@@ -194,8 +198,10 @@ class ModelBase(models.Model):
                     nonfatal = self.optional
                 else:
                     nonfatal = False
+                if _tracing: logger.info(__method + f": nonfatal <- {nonfatal}")
 
             if nonfatal:
+                if _tracing: logger.info(__method + f": {key} not found in data, not fatal")
                 return False
 
             if n is None:
@@ -219,7 +225,7 @@ class ModelBase(models.Model):
             thrown.user_message = _('Returned data missing was missing information. The expected field %(expectation)s.') % \
                                   {'expectation' : key}
             thrown.bad_value = key
-            if print_debug: print(f"\t_verify_key: {text}")
+            if _tracing: logger.info(__method + f": {key} not found in data, fatal! {text}")
             raise thrown
         return True
 
@@ -819,19 +825,24 @@ class Form(Analysable):
 
     def _recurse(self, data: dict, submission: 'Submission', *args, translation: dict = None,
                  question_method: str = None, delegator: str = None, **kwargs):
-        if print_debug:
-            if delegator is None:
-                delegator = ""
-                print(f"{self.__class__.__name__}.recurse( ... ) for {self}")
-            else:
-                delegator += '.'
-                print(f"{self.__class__.__name__}.{delegator}recurse( ... ) for {self}")
+        __method = _context + self.__class__.__name__
+        if delegator is not None:
+            __method += f".{delegator}"
+        __method += '._recurse'
+        if _tracing:
+            logger.info(__method + f"(data, {submission}, translation, {question_method}, {kwargs}) for {self}")
+            if _print_dicts: 
+                logger.info(__method + f": data = {data}")
+                logger.info(__method + f": translation = {translation}")
 
-        self._verify_key(data, 'elements', 'submission', self.id)
+        self._verify_key(data, key='elements', name='submission', n=self.id)
 
-        groups = self.question_groups.order_by('number').all_indicators()
+        groups = self.question_groups.order_by('number').all()
 
-        if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse groups: {groups}")
+        if groups is None:
+            logger.warning(__method + f": query for question groups returned None")
+        elif _tracing:
+            logger.info(__method + f": found {len(groups)} as {groups}")
 
         errors = []
         errors_e = []
@@ -843,19 +854,23 @@ class Form(Analysable):
         for e in data["elements"]:
             n += 1
             if not isinstance(e, dict):  # TODO
-                raise TypeError(f"Entry #{n}: {e} in data for {self} is not the correct type." +
-                                f" {type(e) if e is not None else None}")
+                text = f"Entry #{n}: {e} in data for {self} is not the correct type. " \
+                       f"{type(e) if e is not None else None}"
+                logger.error(__method + f": " + text)
+                raise TypeError(text)
 
             e: dict
 
-            if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} e: {e}")
+            if _tracing:
+                logger.info(__method + f": #{n}")
+                if _print_dicts: logger.info(__method + f": e = {e}")
 
             self._verify_key(e, 'element_type', 'element', n)
 
             if e["element_type"] == QuestionGroup.element_type:
                 m += 1
 
-                if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} {e['element_type']} == {QuestionGroup.element_type}")
+                if _tracing: logger.info(__method + f": #{n}.{m}, {QuestionGroup.element_type}")
 
                 try:
                     group = self._fetch_group(groups, e, m)
@@ -863,7 +878,8 @@ class Form(Analysable):
                     errors.append(er)
                     errors_n.append(n)
                     errors_e.append(e)
-                    if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} errors.append({er}) -> continue")
+                    logger.info(__method + f": #{n}.{m}, {QuestionGroup.element_type}, "
+                                           f"errors.append(LookupError = {er}) -> continue")
                     continue
                 except Exception as er:
                     er.user_message = _('Unexpected error finding data for question group #%(n)d.') % {"n": n}
@@ -871,26 +887,29 @@ class Form(Analysable):
                     errors.append(er)
                     errors_n.append(n)
                     errors_e.append(e)
-                    if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} errors.append({er}) -> continue")
-                    print(f"Unexpected error in {self.__class__.__name__}.{delegator}recurse( ... ) for {self}: {er}")
+                    logger.error(__method + f": #{n}.{m}, {QuestionGroup.element_type}, Unexpected {type(er)} for "
+                                            f"{self}: {er} -> continue")
                     continue
 
-                if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} group {group}")
+                if _tracing: logger.info(__method + f": #{n}.{m}, {QuestionGroup.element_type}, retrieved {group}")
 
                 if question_method is not None:
                     try:
-                        if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse on group.{question_method}: {group}")
+                        if _tracing: logger.info(__method + f": #{n}.{m}, {QuestionGroup.element_type}, "
+                                                            f"call group.{question_method} on {group}")
 
                         getattr(group, question_method)(submission_data=data, submission=submission, data=e,
                                                         group_number=m, values=translation, *args, **kwargs)
 
-                        if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recursed on group.{question_method}: {group}")
+                        if _tracing: logger.info(__method + f": #{n}.{m}, {QuestionGroup.element_type}, "
+                                                            f"returned group.{question_method} on {group}")
 
                     except (ValidationError, ValueError, TypeError) as er:
                         errors.append(er)
                         errors_n.append(n)
                         errors_e.append(e)
-                        if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} group.{question_method} errors.append({er}) -> continue")
+                        logger.info(__method + f": #{n}.{m}, {QuestionGroup.element_type}, "
+                                               f"errors.append({type(er)} = {er}) -> continue")
                         continue
                     except Exception as er:
                         er.user_message = _('Unexpected error processing response for question #%(n)d.') % {"n": n}
@@ -898,23 +917,24 @@ class Form(Analysable):
                         errors.append(er)
                         errors_n.append(n)
                         errors_e.append(e)
-                        if print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} group.{question_method} errors.append({er}) -> continue")
-                        print(f"Unexpected error in group.{question_method} in {self.__class__.__name__}.{delegator}recurse( ... ) for {self}: {er}")
+                        logger.error(__method + f": #{n}.{m}, {QuestionGroup.element_type}, Unexpected {type(er)} for "
+                                                f"{self}: {er} -> continue")
                         continue
 
-            elif print_debug: print(f"\t{self.__class__.__name__}.{delegator}recurse-#{n} {e['element_type']} =/= {QuestionGroup.element_type}")
+            elif _tracing: logger.info(__method + f": #{n}.{m} {e['element_type']} =/= {QuestionGroup.element_type}")
 
         if len(errors) > 0:
             thrown = ValidationError(errors)
             thrown.rev_error_list = errors
             thrown.rev_error_nums = errors_n
             thrown.rev_error_elements = errors_e
-            thrown.user_message = _('#%(num)d errors occured processing the submission.') % {'num': len(errors)}
+            thrown.user_message = _('#%(num)d errors occurred processing the submission.') % {'num': len(errors)}
+            if _tracing: logger.info(__method + f": encountered {len(errors)} errors")
             raise thrown
 
-        if print_debug: print(f"/{delegator}recurse")
-
-        if print_debug_a: print(f"Final variables: {translation}")
+        if _tracing:
+            logger.info(__method + f": done")
+            if _print_dicts: logger.info(__method + f": translation = {translation}")
 
         return translation if translation is not None else True
 
@@ -931,7 +951,7 @@ class Form(Analysable):
         if "elements" not in data.keys():
             raise KeyError(f"Key 'elements' for {self} not present")
 
-        groups = self.question_groups.order_by('number').all_indicators()
+        groups = self.question_groups.order_by('number').all()
 
         if print_debug: print(f"\trespond groups: {groups}")
 
@@ -1003,7 +1023,7 @@ class Form(Analysable):
 
         translation = {'questions' : {'all' : {}}}
 
-        groups = self.question_groups.order_by('number').all_indicators()
+        groups = self.question_groups.order_by('number').all()
 
         if print_debug: print(f"\trespond groups: {groups}")
 
@@ -1300,7 +1320,7 @@ class QuestionGroup(FormElement):
         if print_debug: print(f"{self.__class__.__name__}._fetch_questions( ... ) for {self}")
 
         try:
-            questions = self.questions.order_by('number').all_indicators()
+            questions = self.questions.order_by('number').all()
         except Exception as e:
             if m is None:
                 m = self.number

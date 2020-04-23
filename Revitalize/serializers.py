@@ -632,7 +632,7 @@ class QuestionGroupSerializerDisplay(serializers.ModelSerializer):
         return qg.questions.count()
 
     def get_questions(self, qg: QuestionGroup):
-        questions = sorted(Question.objects.filter(group=qg.pk).all_indicators(), key= lambda q: q.number)
+        questions = sorted(Question.objects.filter(group=qg.pk).all(), key= lambda q: q.number)
         ser = QuestionSerializerDisplay(questions, many=True)
         return ser.data
 
@@ -682,8 +682,8 @@ class FormSerializerDisplay(serializers.ModelSerializer):
         return _str(n.description)
 
     def get_elements(self, f: Form):
-        elements = sorted(chain(f.text_elements.order_by('number').all_indicators(),
-                                f.question_groups.order_by('number').all_indicators()),
+        elements = sorted(chain(f.text_elements.order_by('number').all(),
+                                f.question_groups.order_by('number').all()),
                           key=lambda e: e.number
                           )
 
@@ -758,12 +758,12 @@ class SurveySerializerDisplay(serializers.ModelSerializer):
 
         elements = []
 
-        text_elements = f.text_elements.order_by('number').all_indicators()
+        text_elements = f.text_elements.order_by('number').all()
 
         for te in text_elements:
             elements.append((te.number, TextElementSerializerDisplay(te, many=False)))
 
-        question_groups = f.question_groups.order_by('number').all_indicators()
+        question_groups = f.question_groups.order_by('number').all()
 
         for qg in question_groups:
             elements.append((qg.number, QuestionGroupSerializerDisplay(qg, many=False)))

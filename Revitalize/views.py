@@ -18,7 +18,7 @@ _tracing = True
 # Helper methods
 
 print_debug = True
-print_debug2 = False
+print_debug2 = True
 
 
 def _m(m: str):
@@ -359,7 +359,7 @@ class IndicatorRetrievalViewSet(viewsets.ModelViewSet):
             if max_values is not None:
                 points = q[:max_values]
             else:
-                points = q.all_indicators()
+                points = q.all()
 
             serializer = DataPointSerializerDisplay(points, many=True)
 
