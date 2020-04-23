@@ -2255,7 +2255,7 @@ class BooleanChoiceQuestion(FiniteChoiceQuestion):
             if data == 1: return False
 
             thrown = ValidationError(f"Expected 1 or 2 in {self}, received {value} <{type(value)}>")
-            thrown.user_message = _('Entered value is not as expected. The question expected 1 or 2.')
+            thrown.user_message = _('Entered value is not as expected. The question expected true or false.')
             thrown.bad_value = type(value).__name__
             raise thrown
         return data
