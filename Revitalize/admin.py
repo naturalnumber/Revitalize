@@ -1,6 +1,7 @@
 from django.apps import apps
-from django.contrib import admin
+from django.contrib import admin, auth
 from django.contrib.admin import AdminSite
+from django.contrib.auth.models import Group
 
 from Revitalize.models import *
 
@@ -9,11 +10,9 @@ class DetailedAdminsSite(AdminSite):
     site_header = 'Detailed Admin Administration'
 
     def has_permission(self, request):
+        user: User = request.user
 
-        if request.user.is_anonymous:
-            return request.user.is_active and request.user.is_staff
-        else:
-            return (not request.user.is_lab_tech) and request.user.is_active and request.user.is_staff
+        return user.is_authenticated and user.is_active and user.is_staff and user.is_superuser
 
 
 detailed_admin_site = DetailedAdminsSite(name='detailed_admin_site')
@@ -292,11 +291,9 @@ class AdminsSite(AdminSite):
     site_header = 'Admin Administration'
 
     def has_permission(self, request):
+        user: User = request.user
 
-        if request.user.is_anonymous:
-            return request.user.is_active and request.user.is_staff
-        else:
-            return (not request.user.is_lab_tech) and request.user.is_active and request.user.is_staff
+        return user.is_authenticated and user.is_active and user.is_staff and user.is_superuser
 
 
 admin_site = AdminsSite(name='admin_site')
@@ -304,16 +301,16 @@ admin_site = AdminsSite(name='admin_site')
 
 @admin.register(User, site=admin_site)
 class UserAdmin(admin.ModelAdmin):
-    fields = ('username', 'is_staff', 'is_active', 'is_lab_tech', 'is_superuser', 'last_login', 'date_joined')
+    fields = ('username', 'is_staff', 'is_active', 'is_superuser', 'last_login', 'date_joined')
 
     list_display = ('first_name_', 'last_name_', 'date_of_birth', 'gender',
                     'country', 'street_address', 'city', 'province', 'postal_code',
-                    'username', 'is_staff', 'is_active', 'is_lab_tech', 'is_superuser', 'last_login', 'date_joined')
+                    'username', 'is_staff', 'is_active', 'is_superuser', 'last_login', 'date_joined')
 
     list_filter = ('profile__address__address__province', 'profile__address__address__postal_code',
                    'profile__address__country',
                    'profile__creation_time', 'profile__update_time',
-                   'is_staff', 'is_active', 'is_lab_tech', 'is_superuser')
+                   'is_staff', 'is_active', 'is_superuser')
 
     search_fields = ('username',
                      'profile__first_name', 'profile__last_name', 'profile__address__address__street_address',
@@ -960,8 +957,9 @@ class LabTechSite(AdminSite):
     site_header = 'Admin Administration'
 
     def has_permission(self, request):
+        user: User = request.user
 
-        return request.user.is_active and request.user.is_staff
+        return user.is_authenticated and user.is_active and user.is_staff
 
 
 lab_tech_site = LabTechSite(name='lab_tech_site')
@@ -969,17 +967,17 @@ lab_tech_site = LabTechSite(name='lab_tech_site')
 
 @admin.register(User, site=lab_tech_site)
 class UserLabTech(admin.ModelAdmin):
-    readonly_fields = ('username', 'is_staff', 'is_active', 'is_lab_tech', 'last_login', 'date_joined')
+    readonly_fields = ('username', 'is_staff', 'is_active', 'last_login', 'date_joined')
     exclude = ('password', 'groups', 'is_superuser', 'user_permissions', 'first_name', 'last_name', 'email')
 
     list_display = ('first_name_', 'last_name_', 'date_of_birth', 'gender',
                     'country', 'street_address', 'city', 'province', 'postal_code',
-                    'username', 'is_staff', 'is_active', 'is_lab_tech', 'last_login', 'date_joined')
+                    'username', 'is_staff', 'is_active', 'last_login', 'date_joined')
 
     list_filter = ('profile__address__address__province', 'profile__address__address__postal_code',
                    'profile__address__country',
                    'profile__creation_time', 'profile__update_time',
-                   'is_staff', 'is_active', 'is_lab_tech')
+                   'is_staff', 'is_active')
 
     search_fields = ('username',
                      'profile__first_name', 'profile__last_name', 'profile__address__address__street_address',
