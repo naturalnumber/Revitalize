@@ -1,8 +1,10 @@
 from django.apps import apps
 from django.contrib.admin import AdminSite
 from django.contrib import admin
+from django.contrib.admin.models import LogEntry
 
 from Revitalize.models import *
+
 
 # Administrator Admin Site
 
@@ -22,11 +24,66 @@ admin_site = AdminsSite(name='admin_site')
 
 models = apps.get_models()
 
-for model in models:
-    try:
-        admin_site.register(model)
-    except admin.sites.AlreadyRegistered:
-        pass
+
+@admin.register(User, site=admin_site)
+class ProfileAdmin(admin.ModelAdmin):
+    search_fields = ('username', 'first_name', 'last_name',)
+
+    fieldsets = (
+            ('Required Information', {
+                    'fields'     : ('username', 'password', 'first_name', 'last_name', 'email')
+            }),
+            ('Optional Information', {
+                    'classes': ('collapse',),
+                    'fields' : ('is_superuser', 'is_staff', 'is_lab_tech', 'is_active',
+                                'last_login', 'groups', 'user_permissions', 'date_joined', )
+            }),
+    )
+
+
+@admin.register(Profile, site=admin_site)
+class ProfileAdmin(admin.ModelAdmin):
+    search_fields = ('first_name', 'last_name',)
+
+    fieldsets = (
+            ('Required Information', {
+                    'fields'     : ('user', 'first_name', 'middle_name', 'last_name', 'date_of_birth', 'gender',
+                                    'phone_number', 'phone_number_alt', 'email', 'address', 'ec_first_name',
+                                    'ec_middle_name', 'ec_last_name', 'ec_phone_number', 'physician', 'points',
+                                    'personal_message', 'profile_picture')
+            }),
+            ('Optional Information', {
+                    'classes': ('collapse',),
+                    'fields' : ('flags', 'password_flag', 'preferences')
+            }),
+    )
+
+
+@admin.register(LogEntry, site=admin_site)
+class LogEntryAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+admin_site.register(Address)
+admin_site.register(CanadianAddress)
+admin_site.register(Form)
+admin_site.register(Indicator)
+admin_site.register(MedicalLab)
+admin_site.register(Submission)
+admin_site.register(Survey)
+
+# for model in models:
+#     try:
+#         admin_site.register(model)
+#     except admin.sites.AlreadyRegistered:
+#         pass
 
 
 # Lab Tech Admin Site
@@ -76,7 +133,7 @@ class ProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Survey, site=lab_tech_site)
 class ProfileAdmin(admin.ModelAdmin):
-    readonly_fields = ('form', )
+    readonly_fields = ('form',)
     exclude = ('flags', 'prefix')
 
     def has_add_permission(self, request, obj=None):
@@ -88,7 +145,7 @@ class ProfileAdmin(admin.ModelAdmin):
 
 @admin.register(MedicalLab, site=lab_tech_site)
 class ProfileAdmin(admin.ModelAdmin):
-    readonly_fields = ('form', )
+    readonly_fields = ('form',)
     exclude = ('flags', 'prefix')
 
     def has_add_permission(self, request, obj=None):
@@ -102,7 +159,7 @@ class ProfileAdmin(admin.ModelAdmin):
 class ProfileAdmin(admin.ModelAdmin):
     readonly_fields = ('name', 'description', 'display', 'specification', 'analysis', 'origin', 'type', 'good', 'max',
                        'target', 'min', 'dynamic', 'categorizable', 'conversion')
-    exclude = ('flags', )
+    exclude = ('flags',)
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -114,7 +171,7 @@ class ProfileAdmin(admin.ModelAdmin):
 @admin.register(IntDataPoint, site=lab_tech_site)
 class ProfileAdmin(admin.ModelAdmin):
     readonly_fields = ('name', 'description', 'time', 'validated', 'processed', 'user', 'indicator', 'value', 'source')
-    exclude = ('flags', )
+    exclude = ('flags',)
 
     def has_add_permission(self, request, obj=None):
         return False
