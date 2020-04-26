@@ -2818,6 +2818,7 @@ class Indicator(Analysable):
             info['min'] = self.min
             info['target'] = self.target
             info['goal_message'] = self.get_goal_message()
+            info['unit'] = self.unit
         else:
             # TODO
             pass
@@ -2835,6 +2836,7 @@ class Indicator(Analysable):
             info['min'] = self.min
             info['target'] = self.target
             info['goal_message'] = self.get_goal_message()
+            info['unit'] = self.unit
         else:
             # TODO
             pass
