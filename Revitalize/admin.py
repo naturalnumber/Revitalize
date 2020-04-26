@@ -261,7 +261,7 @@ class IntDataPointInline2(admin.TabularInline):
     model = IntDataPoint
 
     readonly_fields = ('id',)
-    fields = ('user', 'indicator', 'time', 'value', 'validated')
+    fields = ('user', 'indicator', 'time', 'value')
 
     extra = 0
     show_change_link = True
@@ -275,7 +275,7 @@ class FloatDataPointInline2(admin.TabularInline):
     model = FloatDataPoint
 
     readonly_fields = ('id',)
-    fields = ('user', 'indicator', 'time', 'value', 'validated')
+    fields = ('user', 'indicator', 'time', 'value')
 
     extra = 0
     show_change_link = True
@@ -635,8 +635,8 @@ class IndicatorAdmin(admin.ModelAdmin):
 
 @admin.register(IntDataPoint, site=admin_site)
 class IntDataPointAdmin(admin.ModelAdmin):
-    fields = ('user', 'indicator', 'time', 'value', 'validated',)
-    exclude = ('name', 'description', 'flags', 'source', 'processed')
+    fields = ('user', 'indicator', 'time', 'value',)
+    exclude = ('name', 'description', 'flags', 'source', 'validated', 'processed')
 
     list_display = ('first_name', 'last_name', 'indicator_', 'time', 'value')
     list_filter = ('indicator', 'time')
@@ -666,8 +666,8 @@ class IntDataPointAdmin(admin.ModelAdmin):
 
 @admin.register(FloatDataPoint, site=admin_site)
 class FloatDataPointAdmin(admin.ModelAdmin):
-    fields = ('user', 'indicator', 'time', 'value', 'validated',)
-    exclude = ('name', 'description', 'flags', 'source', 'processed')
+    fields = ('user', 'indicator', 'time', 'value',)
+    exclude = ('name', 'description', 'flags', 'source', 'validated', 'processed')
 
     list_display = ('first_name', 'last_name', 'indicator_', 'time', 'value')
     list_filter = ('indicator', 'time')
@@ -929,7 +929,7 @@ class IntDataPointInlineLT2(admin.TabularInline):
     model = IntDataPoint
 
     readonly_fields = ('id',)
-    fields = ('user', 'indicator', 'time', 'value', 'validated')
+    fields = ('user', 'indicator', 'time', 'value')
 
     extra = 0
     show_change_link = True
@@ -943,7 +943,7 @@ class FloatDataPointInlineLT2(admin.TabularInline):
     model = FloatDataPoint
 
     readonly_fields = ('id',)
-    fields = ('user', 'indicator', 'time', 'value', 'validated')
+    fields = ('user', 'indicator', 'time', 'value')
 
     extra = 0
     show_change_link = True
@@ -961,10 +961,7 @@ class LabTechSite(AdminSite):
 
     def has_permission(self, request):
 
-        if request.user.is_anonymous:
-            return request.user.is_active and request.user.is_staff
-        else:
-            return (not request.user.is_lab_tech) and request.user.is_active and request.user.is_staff
+        return request.user.is_active and request.user.is_staff
 
 
 lab_tech_site = LabTechSite(name='lab_tech_site')
@@ -1385,8 +1382,8 @@ class IndicatorLabTech(admin.ModelAdmin):
 
 @admin.register(IntDataPoint, site=lab_tech_site)
 class IntDataPointLabTech(admin.ModelAdmin):
-    fields = ('user', 'indicator', 'time', 'value', 'validated',)
-    exclude = ('name', 'description', 'flags', 'source', 'processed')
+    fields = ('user', 'indicator', 'time', 'value',)
+    exclude = ('name', 'description', 'flags', 'source', 'validated', 'processed')
 
     list_display = ('first_name', 'last_name', 'indicator_', 'time', 'value')
     list_filter = ('indicator', 'time')
@@ -1416,8 +1413,8 @@ class IntDataPointLabTech(admin.ModelAdmin):
 
 @admin.register(FloatDataPoint, site=lab_tech_site)
 class FloatDataPointLabTech(admin.ModelAdmin):
-    fields = ('user', 'indicator', 'time', 'value', 'validated',)
-    exclude = ('name', 'description', 'flags', 'source', 'processed')
+    fields = ('user', 'indicator', 'time', 'value',)
+    exclude = ('name', 'description', 'flags', 'source', 'validated', 'processed')
 
     list_display = ('first_name', 'last_name', 'indicator_', 'time', 'value')
     list_filter = ('indicator', 'time')

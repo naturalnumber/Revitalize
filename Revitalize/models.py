@@ -33,25 +33,27 @@ class User(AbstractUser):
     is_lab_tech = models.BooleanField(default=False)
 
     def get_available_surveys(self) -> QuerySet:
-        return Survey.objects.all()
+        return Form.all_surveys()  # Survey.objects.all()
 
-    def get_point_sets(self, point_data_types: list = None, *args, **kwargs):
+    def get_point_sets(self, point_data_types: list = None, *args, **kwargs) -> list:
         __method = _context + self.__class__.__name__ + '.' + 'get_point_sets'
-        if _tracing: logger.info(__method + f"({point_data_types}, {kwargs})")
+        if _tracing: logger.info(__method + f"({point_data_types}, {kwargs}) for {self}")
 
         q: QuerySet
         point_q_sets = []
 
-        if point_data_types is None or Indicator.DataType.INT.value in point_data_types:
-            point_q_sets.append(IntDataPoint.objects.filter(user=self, **kwargs))
         if point_data_types is None or Indicator.DataType.FLOAT.value in point_data_types:
-            point_q_sets.append(FloatDataPoint.objects.filter(user=self, **kwargs))
+            point_q_sets.append(FloatDataPoint.objects.filter(user=self, **kwargs).all())
+        if point_data_types is None or Indicator.DataType.INT.value in point_data_types:
+            point_q_sets.append(IntDataPoint.objects.filter(user=self, **kwargs).all())
+
+        if _tracing: logger.info(__method + f": QuerySet(s) = {point_q_sets}")
 
         return point_q_sets
 
     def get_data_points(self, point_data_types: list = None, *args, **kwargs) -> QuerySet:
         __method = _context + self.__class__.__name__ + '.' + 'get_data_points'
-        if _tracing: logger.info(__method + f"({kwargs})")
+        if _tracing: logger.info(__method + f"({kwargs}) for {self}")
 
         point_q_sets: list = self.get_point_sets(point_data_types=point_data_types, **kwargs)
 
@@ -60,7 +62,10 @@ class User(AbstractUser):
             q: QuerySet
             if points is None:
                 points = q
-            points = points.union(q)
+            else:
+                points = points.union(q)
+
+        if _tracing: logger.info(__method + f": points = {points}")
         return points
 
 
@@ -761,8 +766,8 @@ class Form(Analysable):
     ModelHelper.register(_name, 'tag', 90, to_filter=True, to_search=True)
     ModelHelper.register(_name, 'type', 85, to_filter=True, to_search=True)
 
-    @staticmethod
-    def all_surveys():
+    @classmethod
+    def all_surveys(cls) -> QuerySet:
         return Form.objects.filter(type=Form.FormType.SURVEY.value)
 
     def is_survey(self):
@@ -774,7 +779,7 @@ class Form(Analysable):
     def is_dietary(self):
         return self.type == self.FormType.DIETARY_JOURNAL.value
 
-    def get_survey(self):
+    def get_survey(self) -> 'Survey':
         if not self.is_survey():
             return None
 
@@ -2739,11 +2744,11 @@ class Indicator(Analysable):
         RANGE = 'R', _('Target Range is Good')
         NONE = 'N', _('No Best Value')
 
-    origin = models.CharField(max_length=1, blank=False, choices=DataType.choices, default=OriginType.UNKNOWN)
+    origin = models.CharField(max_length=1, blank=False, choices=OriginType.choices, default=OriginType.UNKNOWN)
 
     type = models.CharField(max_length=1, blank=False, choices=DataType.choices, default=DataType.UNKNOWN)
 
-    good = models.CharField(max_length=1, blank=False, choices=DataType.choices, default=GoalType.UNKNOWN)
+    good = models.CharField(max_length=1, blank=False, choices=GoalType.choices, default=GoalType.UNKNOWN)
 
     max = models.FloatField(null=True, blank=True)
     target = models.FloatField(null=True, blank=True)

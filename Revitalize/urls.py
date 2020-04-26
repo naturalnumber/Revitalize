@@ -35,7 +35,7 @@ router.register('profiles', ProfileRetrievalViewSet, basename='profile')
 #        {name: 'Weight', value: 125', submission_date:  3424324}]
 # 	GET -> all lab values associated with an id and user (history)
 # 	POST -> {min_date, max_date} filtered version
-router.register('data-values', LabValueRetrievalViewSet, basename='data-value')
+router.register('data-values', DataPointRetrievalViewSet, basename='data-value')
 router.register('lab-values', LabValueRetrievalViewSet, basename='lab-value')
 router.register('survey-values', SurveyValueRetrievalViewSet, basename='survey-value')
 

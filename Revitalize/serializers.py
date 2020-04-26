@@ -909,22 +909,49 @@ class AvailableSurveySerializer(serializers.ModelSerializer):
     alt_id = serializers.SerializerMethodField()
 
     class Meta:
-        model = Survey
+        model = Form
         fields = ['id', 'name', 'description', 'alt_id']
 
-    def get_name(self, s: Survey):
-        #name_serializer = StringSerializer(s.form.name, many=False)
-        return _str(s.form.name)
+    def get_name(self, s: Form):
+        return _str(s.name)
 
-    def get_description(self, s: Survey):
-        #description_serializer = TextSerializer(s.form.description, many=False)
-        return _str(s.form.description)
+    def get_description(self, s: Form):
+        return _str(s.description)
 
-    def get_id(self, s: Survey):
-        return s.form.id
-
-    def get_alt_id(self, s: Survey):
+    def get_id(self, s: Form):
         return s.id
+
+    def get_alt_id(self, s: Form):
+        survey = None
+        try:
+            survey = s.get_survey()
+        except:
+            pass
+        return survey.id if survey is not None else -1
+
+# class AvailableSurveySerializer(serializers.ModelSerializer):
+#     id = serializers.SerializerMethodField()
+#     name = serializers.SerializerMethodField()
+#     description = serializers.SerializerMethodField()
+#     alt_id = serializers.SerializerMethodField()
+#
+#     class Meta:
+#         model = Survey
+#         fields = ['id', 'name', 'description', 'alt_id']
+#
+#     def get_name(self, s: Survey):
+#         #name_serializer = StringSerializer(s.form.name, many=False)
+#         return _str(s.form.name)
+#
+#     def get_description(self, s: Survey):
+#         #description_serializer = TextSerializer(s.form.description, many=False)
+#         return _str(s.form.description)
+#
+#     def get_id(self, s: Survey):
+#         return s.form.id
+#
+#     def get_alt_id(self, s: Survey):
+#         return s.id
 
 
 class ProfileRetrievalSerializer(serializers.ModelSerializer):
