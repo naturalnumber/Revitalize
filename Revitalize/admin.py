@@ -230,10 +230,6 @@ class QuestionInline(admin.TabularInline):
     extra = 0
     show_change_link = True
 
-    verbose_name = 'Data Points'
-
-    verbose_name_plural = 'Data Points'
-
 
 class IntDataPointInline(admin.TabularInline):
     model = IntDataPoint
@@ -572,13 +568,14 @@ class QuestionGroupAdmin(admin.ModelAdmin):
     fields = ('number', 'prefix', 'type', 'text', 'help_text', 'screen_reader_text', 'internal_name')
     exclude = ('flags', 'notes', 'display', 'specification', 'analysis', 'annotations')
 
-    inlines = _q_type_inlines + [QuestionInline, ]
+    inlines = [QuestionInline, ] + _q_type_inlines
 
     def get_formsets_with_inlines(self, request, group:QuestionGroup=None):
         for inline in self.get_inline_instances(request, group):
             # hide MyInline in the add view
 
             if inline is not None and (not isinstance(inline, tuple(_q_type_inlines))
+                                       or inline.model is Question
                                        or inline.model is group.data_class()):
                 yield inline.get_formset(request, group), inline
 
