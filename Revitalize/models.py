@@ -444,9 +444,9 @@ class Nameable(Notable):
     _parent = 'Notable'  # internal name
 
     # TODO The on delete should be sorted and the keys may want to be one to one
-    name = models.ForeignKey(String, on_delete=models.SET_NULL, null=True,  # related_name='strings',
+    name = models.ForeignKey(String, on_delete=models.SET_NULL, null=True, blank=True,  # related_name='strings',
                              help_text="The name of this entry.")
-    description = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True,  # related_name='texts',
+    description = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, blank=True,  # related_name='texts',
                                     help_text="The description of this entry.")
 
     class Meta:
@@ -1091,7 +1091,7 @@ class Survey(ModelBase):
 
     prefix = models.CharField(max_length=10, blank=True)
 
-    form = models.OneToOneField(Form, on_delete=models.SET_NULL, null=True, related_name='surveys')
+    form = models.OneToOneField(Form, on_delete=models.SET_NULL, null=True, blank=True, related_name='surveys')
 
     def __str__(self):
         return str(self.form.name) + f" ({self.id})"
@@ -1108,7 +1108,7 @@ class MedicalLab(ModelBase):
 
     prefix = models.CharField(max_length=10, blank=True)
 
-    form = models.OneToOneField(Form, on_delete=models.SET_NULL, null=True, related_name='labs')
+    form = models.OneToOneField(Form, on_delete=models.SET_NULL, null=True, blank=True, related_name='labs')
 
     def __str__(self):
         return str(self.form.name) + f" ({self.id})"
@@ -1144,15 +1144,15 @@ class TextElement(FormElement):
     element_type = "text"
 
     # can't inherit
-    form = models.ForeignKey(Form, on_delete=models.SET_NULL, null=True, related_name='text_elements', db_index=True)
+    form = models.ForeignKey(Form, on_delete=models.SET_NULL, null=True, blank=True, related_name='text_elements', db_index=True)
 
-    text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='text_elements',
+    text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, blank=True, related_name='text_elements',
                              help_text="The text of this text element.")
 
-    help_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='text_elements_h',
+    help_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, blank=True, related_name='text_elements_h',
                                   help_text="The help text of this question.")
 
-    screen_reader_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='text_elements_sr',
+    screen_reader_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, blank=True, related_name='text_elements_sr',
                                            help_text="The screen reader text of this question.")
 
     class Meta:
@@ -1194,23 +1194,23 @@ class QuestionGroup(FormElement):
     type = models.CharField(max_length=1, blank=False, choices=DataType.choices, default=DataType.UNKNOWN)
 
     # can't inherit
-    form = models.ForeignKey(Form, on_delete=models.SET_NULL, null=True, related_name='question_groups',
+    form = models.ForeignKey(Form, on_delete=models.SET_NULL, null=True, blank=True, related_name='question_groups',
                              db_index=True)
 
-    text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='question_groups',
+    text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, blank=True, related_name='question_groups',
                              help_text="The text of this question group.")
 
-    help_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='question_groups_h',
+    help_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, blank=True, related_name='question_groups_h',
                                   help_text="The help text of this question group.")
 
-    screen_reader_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True,
+    screen_reader_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, blank=True,
                                            related_name='question_groups_sr',
                                            help_text="The screen reader text of this question group.")
 
     internal_name = models.CharField(max_length=10, blank=True)
 
     # Used for units, format hints, etc.
-    annotations = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
+    annotations = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True, blank=True,
                                     validators=[validate_json], related_name='question_groups',
                                     help_text="The annotation of this question group.")
 
@@ -1737,22 +1737,22 @@ class Question(Displayable):
     number = models.IntegerField(null=False)
     optional = models.BooleanField(null=False, default=False)
 
-    group = models.ForeignKey(QuestionGroup, on_delete=models.SET_NULL, null=True,
+    group = models.ForeignKey(QuestionGroup, on_delete=models.SET_NULL, null=True, blank=True,
                               related_name='questions', db_index=True)
 
-    text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='questions',
+    text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, blank=True, related_name='questions',
                              help_text="The text of this question.")
 
-    help_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='questions_h',
+    help_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, blank=True, related_name='questions_h',
                                   help_text="The help text of this question.")
 
-    screen_reader_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, related_name='questions_sr',
+    screen_reader_text = models.ForeignKey(Text, on_delete=models.SET_NULL, null=True, blank=True, related_name='questions_sr',
                                            help_text="The help text of this question.")
 
     internal_name = models.CharField(max_length=10, blank=False, default=_default_var_flag)
 
     # Used for units, format hints, etc.
-    annotations = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
+    annotations = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True, blank=True,
                                     validators=[validate_json], related_name='questions',
                                     help_text="The annotation of this question.")
 
@@ -1963,7 +1963,7 @@ class TextQuestion(QuestionType):
     max_length = models.IntegerField(null=False)
 
     # Can't inherit
-    group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True,
+    group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name='text_group', db_index=True)
 
     # Used with views and serializers
@@ -2012,7 +2012,7 @@ class IntQuestion(QuestionType):
     max = models.IntegerField(null=False)
 
     # Can't inherit
-    group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True,
+    group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name='int_group', db_index=True)
 
     # Used with views and serializers
@@ -2063,7 +2063,7 @@ class FloatQuestion(QuestionType):
     max = models.FloatField(null=False)
 
     # Can't inherit
-    group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True,
+    group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name='float_group', db_index=True)
 
     # Used with views and serializers
@@ -2164,11 +2164,11 @@ class IntRangeQuestion(FiniteChoiceQuestion):
     max = models.IntegerField(null=False)
     step = models.IntegerField(null=False, default=1)
 
-    labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True, related_name='int_range_questions',
+    labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True, blank=True, related_name='int_range_questions',
                                help_text="The labels of this question's categories.")
 
     # Can't inherit
-    group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True,
+    group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name="int_range_group", db_index=True)
 
     # Used with views and serializers
@@ -2232,12 +2232,12 @@ class BooleanChoiceQuestion(FiniteChoiceQuestion):
 
     _default_labels = json.dumps(["no", "yes"])
 
-    labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
+    labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True, blank=True,
                                related_name='boolean_choice_questions',
                                help_text="The labels of this question's categories.")
 
     # Can't inherit
-    group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True,
+    group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name='boolean_choice_group', db_index=True)
 
     # Used with views and serializers
@@ -2287,12 +2287,12 @@ class ExclusiveChoiceQuestion(FiniteChoiceQuestion):
     response_type = QuestionGroup.ResponseType.INT.value
     value_type = QuestionType.ValueType.INT.value
 
-    labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
+    labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True, blank=True,
                                related_name='exclusive_choice_questions',
                                help_text="The labels of this question's categories.")
 
     # Can't inherit
-    group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True,
+    group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name='exclusive_choice_group', db_index=True)
 
     # Used with views and serializers
@@ -2367,12 +2367,12 @@ class MultiChoiceQuestion(FiniteChoiceQuestion):
     min_choices = models.IntegerField(null=False)
     max_choices = models.IntegerField(null=False)
 
-    labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
+    labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True, blank=True,
                                related_name='multi_choice_questions',
                                help_text="The labels of this question's categories.")
 
     # Can't inherit
-    group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True,
+    group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name='multi_choice_group', db_index=True)
 
     # Used with views and serializers
@@ -2442,12 +2442,12 @@ class FloatRangeQuestion(QuestionType):
     min = models.FloatField(null=False)
     max = models.FloatField(null=False)
 
-    labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True,
+    labels = models.ForeignKey(StringGroup, on_delete=models.SET_NULL, null=True, blank=True,
                                related_name='float_range_questions',
                                help_text="The labels of this question's categories.")
 
     # Can't inherit
-    group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True,
+    group = models.OneToOneField(QuestionGroup, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name='float_range_group', db_index=True)
 
     # Used with views and serializers
@@ -2494,8 +2494,8 @@ class Submission(ModelBase):
     # profile = models.ForeignKey('Profile', on_delete=models.CASCADE, null=False, related_name='submissions')
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, related_name='submissions')
-    form = models.ForeignKey(Form, on_delete=models.SET_NULL, null=True, related_name='submissions')
-    submitter = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='submissions_s')
+    form = models.ForeignKey(Form, on_delete=models.SET_NULL, null=True, blank=True, related_name='submissions')
+    submitter = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='submissions_s')
 
     time = models.DateTimeField(null=False, db_index=True)
 
@@ -2644,9 +2644,9 @@ class TextResponse(ResponseType):
     _name = 'TextResponse'  # internal name
     _parent = 'ResponseType'  # internal name
 
-    submission = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True, related_name='text_responses')
+    submission = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True, blank=True, related_name='text_responses')
 
-    question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True,
+    question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name='text_responses')
 
     value = models.TextField(null=False, validators=[ResponseType.validate_value])
@@ -2674,9 +2674,9 @@ class IntResponse(ResponseType):
     _name = 'IntResponse'  # internal name
     _parent = 'ResponseType'  # internal name
 
-    submission = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True, related_name='int_responses')
+    submission = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True, blank=True, related_name='int_responses')
 
-    question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True,
+    question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name='int_responses')
 
     value = models.IntegerField(null=False, validators=[ResponseType.validate_value])
@@ -2696,9 +2696,9 @@ class FloatResponse(ResponseType):
     _name = 'FloatResponse'  # internal name
     _parent = 'ResponseType'  # internal name
 
-    submission = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True, related_name='float_responses')
+    submission = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True, blank=True, related_name='float_responses')
 
-    question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True,
+    question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name='float_responses')
 
     value = models.FloatField(null=False, validators=[ResponseType.validate_value])
@@ -2745,9 +2745,9 @@ class Indicator(Analysable):
 
     good = models.CharField(max_length=1, blank=False, choices=DataType.choices, default=GoalType.UNKNOWN)
 
-    max = models.FloatField(null=True)
-    target = models.FloatField(null=True)
-    min = models.FloatField(null=True)
+    max = models.FloatField(null=True, blank=True)
+    target = models.FloatField(null=True, blank=True)
+    min = models.FloatField(null=True, blank=True)
 
     dynamic = models.BooleanField(blank=False, default=False)
     categorizable = models.BooleanField(blank=False, default=False)
@@ -2879,11 +2879,11 @@ class IntDataPoint(IndicatorDataPoint):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, related_name='int_data_points')
 
-    indicator = models.ForeignKey(Indicator, on_delete=models.SET_NULL, null=True, related_name='int_data_points')
+    indicator = models.ForeignKey(Indicator, on_delete=models.SET_NULL, null=True, blank=True, related_name='int_data_points')
     value = models.IntegerField(null=False)
 
     # Optional submission which triggered this point
-    source = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True, related_name='int_data_points')
+    source = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True, blank=True, related_name='int_data_points')
 
     ModelHelper.register(_name, 'user', 85, foreign=User)
     ModelHelper.register(_name, 'indicator', 85, foreign=Indicator)
@@ -2896,11 +2896,11 @@ class FloatDataPoint(IndicatorDataPoint):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, related_name='float_data_points')
 
-    indicator = models.ForeignKey(Indicator, on_delete=models.SET_NULL, null=True, related_name='float_data_points')
+    indicator = models.ForeignKey(Indicator, on_delete=models.SET_NULL, null=True, blank=True, related_name='float_data_points')
     value = models.FloatField(null=False)
 
     # Optional submission which triggered this point
-    source = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True, related_name='float_data_points')
+    source = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True, blank=True, related_name='float_data_points')
 
     ModelHelper.register(_name, 'user', 85, foreign=User)
     ModelHelper.register(_name, 'indicator', 85, foreign=Indicator)
