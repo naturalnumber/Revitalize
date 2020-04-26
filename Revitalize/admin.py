@@ -961,10 +961,7 @@ class LabTechSite(AdminSite):
 
     def has_permission(self, request):
 
-        if request.user.is_anonymous:
-            return request.user.is_active and request.user.is_staff
-        else:
-            return (not request.user.is_lab_tech) and request.user.is_active and request.user.is_staff
+        return request.user.is_active and request.user.is_staff
 
 
 lab_tech_site = LabTechSite(name='lab_tech_site')
