@@ -1,11 +1,17 @@
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
 from django.db.models.query import QuerySet
+from django.shortcuts import redirect, render
 from django.utils.datetime_safe import datetime, date, time
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.utils.translation import gettext as _
 
+from Revitalize.forms import AccountCreationForm, AccountRegistrationForm
 from Revitalize.serializers import *
 from django.utils import timezone
 from Revitalize.utils import recursive_exception_parse, parse_datetime
@@ -42,7 +48,7 @@ def _data(serializer: serializers.ModelSerializer):
 
 
 def _transfer_valid(d: dict, s: dict, m, excluded_values: list = None):
-    __method = _context + '.' + '_transfer_valid'
+    __method = _context + '_transfer_valid'
     if _tracing: logger.info(__method + f"({d}, {s}, {m}, {list})")
 
     if excluded_values is None:
@@ -78,6 +84,68 @@ def _limit_values(q: QuerySet, from_data: dict, default: int = 100) -> QuerySet:
         return q[:max_values]
     else:
         return q.all()
+
+@login_required
+def register_account(request):
+    __method = _context + 'register_account'
+    if _tracing: logger.info(__method + f"({request})")
+
+    user: User = None
+
+    try:
+        user : User = request.user
+        if not (user.is_authenticated and user.is_active and user.is_staff):
+            raise PermissionDenied
+    except Exception as e:
+        if not isinstance(e, PermissionDenied):
+            logger.warning(__method + f": error {e} user = {user}")
+        raise PermissionDenied
+
+    if request.method == 'POST':
+        f = AccountRegistrationForm(request.POST)
+        if f.is_valid():
+            f.save()
+            messages.success(request, 'Account registered successfully')
+            return redirect('register_account')
+
+    else:
+        f = AccountRegistrationForm()
+
+    return render(request, 'account/register.html', {'form': f})
+
+
+class BaseViewSet(viewsets.ModelViewSet):
+
+    class Meta:
+        abstract = True
+
+@login_required
+def create_account(request):
+    __method = _context + 'create_account'
+    if _tracing: logger.info(__method + f"({request})")
+
+    user: User = None
+
+    try:
+        user : User = request.user
+        if not (user.is_authenticated and user.is_active and user.is_staff):
+            raise PermissionDenied
+    except Exception as e:
+        if not isinstance(e, PermissionDenied):
+            logger.warning(__method + f": error {e} user = {user}")
+        raise PermissionDenied
+
+    if request.method == 'POST':
+        f = AccountCreationForm(request.POST)
+        if f.is_valid():
+            f.save()
+            messages.success(request, 'Account created successfully')
+            return redirect('create_account')
+
+    else:
+        f = AccountCreationForm()
+
+    return render(request, 'account/create.html', {'form': f})
 
 
 class BaseViewSet(viewsets.ModelViewSet):
