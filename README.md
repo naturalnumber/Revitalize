@@ -41,16 +41,28 @@ Name | Version | Description
 # Features
 
 ## API
+The API is created using the Django REST Framework and it is how the frontend and backend communicate. 
+'serializers.py' allows for complex data types to be converted to native python
 
 ## Authentication
+Authentication is handled by simple jwt that works on top of the Django REST Framework
+This package gives a version of a JSON Web Token that is more secure than other common authentication methods that are included in django.
 
 ## Database
+The database is represented by the `models.py` file and can be described generally by looking at the `user` and `form` models.
+
+### User
+`User` contains basic information including the username, password, and boolean flags such as `is_staff`
+Users are linked to a `profile` that contains much more detailed information about the person.
+The user model is also used to link a person to anything that involves them. This includes a `submissions` or a form of data point.
+
+### Form
+`Form` contains the information of anything that can be described in the format of a form. This can be a `Survey` or a `MedicalLab` and will contain all the information needed for the instructions, questions, answers, and format of the form.
+The form model is also used to link a form to a `submission` so that the data saved in the submission can reference the form.
+
+### Submission
+`Submission` contains a combination of data points and responses that can be referenced by what user the submission is for and the form that the submission represents. 
 
 ## Backend Interface
-
-
-
-
-
-
+Django includes a very flexible admin interface that provides a user friendly way of interacting with database values. In our application there are two different admin interfaces divided into high level admin users and labtech users who have fewer permissions. These users are identified by the boolean fields `is_lab_tech`, `is_staff` and `is_superuser`.
 
