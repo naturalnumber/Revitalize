@@ -304,7 +304,9 @@ admin_site = AdminsSite(name='admin_site')
 
 @admin.register(User, site=admin_site)
 class UserAdmin(admin.ModelAdmin):
-    fields = ('username', 'is_staff', 'is_active', 'is_lab_tech', 'is_superuser', 'last_login', 'date_joined')
+    fields = ('username', 'is_staff', 'is_active', 'is_lab_tech', 'is_superuser', 'last_login', 'date_joined',
+              'user_permissions')
+    exclude = ('password', 'groups', 'first_name', 'last_name', 'email')
 
     list_display = ('first_name_', 'last_name_', 'date_of_birth', 'gender',
                     'country', 'street_address', 'city', 'province', 'postal_code',
