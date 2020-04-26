@@ -14,7 +14,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from Revitalize.admin import admin_site, lab_tech_site
+from Revitalize.admin import admin_site, lab_tech_site, detailed_admin_site
 from django.urls import include, path
 from rest_framework_simplejwt.views import (TokenObtainPairView, TokenRefreshView)
 
@@ -26,6 +26,7 @@ from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 urlpatterns = [
         path('admin/', admin_site.urls),
         path('labtech/', lab_tech_site.urls),
+        path('detailed/', detailed_admin_site.urls),
         path('api/', include('Revitalize.urls')),
         # TODO could these be put in the Revitalize urls.py?
         # Authentication : https://github.com/davesque/django-rest-framework-simplejwt

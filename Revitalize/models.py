@@ -2108,8 +2108,8 @@ class FiniteChoiceQuestion(QuestionType):
     response_type = QuestionGroup.ResponseType.INT.value
     value_type = QuestionType.ValueType.INT.value
 
-    num_possibilities = models.IntegerField(null=False)
-    initial = models.IntegerField(null=False)
+    num_possibilities = models.IntegerField(null=False, default=2)
+    initial = models.IntegerField(null=False, default=1)
 
     class Meta:
         abstract = True
