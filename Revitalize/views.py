@@ -42,8 +42,8 @@ def _data(serializer: serializers.ModelSerializer):
 
 
 def _transfer_valid(d: dict, s: dict, m, excluded_values: list = None):
-    __method = '_transfer_valid'
-    if _tracing: logger.info(_context + __method + f"({d}, {s}, {m}, {list})")
+    __method = _context + '.' + '_transfer_valid'
+    if _tracing: logger.info(__method + f"({d}, {s}, {m}, {list})")
 
     if excluded_values is None:
         excluded_values = [None]
@@ -119,7 +119,11 @@ class DataPointRetrievalViewSet(viewsets.ModelViewSet):
     _point_origin = None
 
     def get_queryset(self):
+        __method = _context + self.__class__.__name__ + '.' + 'get_queryset'
+        if _tracing: logger.info(__method + f"()")
+
         user: User = self.request.user
+        if _tracing: logger.info(__method + f": user = {user}")
 
         # return self._points(user=user).order_by('-time')
 
@@ -128,7 +132,11 @@ class DataPointRetrievalViewSet(viewsets.ModelViewSet):
         if self._point_origin is not None:
             ad_kwargs['indicator__origin'] = self._point_origin
 
-        return user.get_data_points(point_data_types=self._point_data_types, **ad_kwargs).order_by('-time')
+        qs: QuerySet = user.get_data_points(point_data_types=self._point_data_types, **ad_kwargs).order_by('-time')
+
+        if _tracing: logger.info(__method + f": queryset = {qs}")
+
+        return qs
 
     #  values/user/ -> retrieve all data values associated with a user in format:
     #  survey-values/user/ -> retrieve all survey values associated with a user in format:
@@ -144,8 +152,10 @@ class DataPointRetrievalViewSet(viewsets.ModelViewSet):
         data: dict = None
         try:
             user: User = request.user
+            if _tracing: logger.info(__method + f": user = {user}")
+
             data: dict = request.data
-            if _tracing: logger.info(__method + f": user = {user}, data = {data}")
+            if _tracing: logger.info(__method + f": data = {data}")
 
             ad_kwargs = {}
 
@@ -162,8 +172,13 @@ class DataPointRetrievalViewSet(viewsets.ModelViewSet):
 
             points: QuerySet = user.get_data_points(point_data_types=self._point_data_types,
                                                     **ad_kwargs).order_by('-time')
+            if _tracing: logger.info(__method + f": points = {points}")
 
-            return _data(DataPointSerializerDisplay(_limit_values(points, from_data=data, default=100), many=True))
+            serializer = DataPointSerializerDisplay(_limit_values(points, from_data=data, default=100), many=True)
+
+            to_send = _data(serializer)
+            if _tracing: logger.info(__method + f": return = {to_send}")
+            return to_send
         except Exception as e:
             logger.warning(__method + f": error {e} user = {user}, data = {data}")
             return _bad(f"Could not access data points ({e})")
@@ -188,10 +203,13 @@ class DataPointRetrievalViewSet(viewsets.ModelViewSet):
         indicator: Indicator = None
         try:
             user: User = request.user
+            if _tracing: logger.info(__method + f": user = {user}")
+
             data: dict = request.data
-            if _tracing: logger.info(__method + f": user = {user}, data = {data}")
+            if _tracing: logger.info(__method + f": data = {data}")
 
             indicator: Indicator = Indicator.objects.prefetch_related('int_data_points', 'float_data_points').get(pk=pk)
+            if _tracing: logger.info(__method + f": indicator = {indicator}")
 
             ad_kwargs = {}
 
@@ -204,8 +222,13 @@ class DataPointRetrievalViewSet(viewsets.ModelViewSet):
                 ad_kwargs['time__lte'] = max_date
 
             points: QuerySet = indicator.data_points().filter(user=user, **ad_kwargs).order_by('-time')
+            if _tracing: logger.info(__method + f": points = {points}")
 
-            return _data(DataPointSerializerDisplay(_limit_values(points, from_data=data, default=100), many=True))
+            serializer = DataPointSerializerDisplay(_limit_values(points, from_data=data, default=100), many=True)
+
+            to_send = _data(serializer)
+            if _tracing: logger.info(__method + f": return = {to_send}")
+            return to_send
         except Exception as e:
             logger.warning(__method + f": error {e} user = {user}, data = {data}")
             return _bad(f"Could not access data points ({e})")
@@ -330,12 +353,18 @@ class IndicatorRetrievalViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['GET', 'POST'], url_path='user')
     def data(self, request, pk=None, *arg, **kwargs):
-        if print_debug: print(f"Filtered indicator data request received for user")
+        __method = _context + self.__class__.__name__ + '.' + 'data'
+        if _tracing: logger.info(__method + f"({request})")
+
+        user: User = None
+        data: dict = None
         try:
             user: User = request.user
+            if _tracing: logger.info(__method + f": user = {user}")
+
             data: dict = request.data
 
-            if print_debug: print(user)
+            if _tracing: logger.info(__method + f": data = {data}")
 
             max_values = 100
             if data is not None and 'max_values' in data.keys():
@@ -343,6 +372,7 @@ class IndicatorRetrievalViewSet(viewsets.ModelViewSet):
                 max_values = data['max_values']
 
             indicator: Indicator = Indicator.objects.prefetch_related('int_data_points', 'float_data_points').get(pk=pk)
+            if _tracing: logger.info(__method + f": indicator = {indicator}")
 
             q = indicator.data_class().objects.filter(user=user)
 
@@ -360,39 +390,41 @@ class IndicatorRetrievalViewSet(viewsets.ModelViewSet):
                 points = q[:max_values]
             else:
                 points = q.all()
+            if _tracing: logger.info(__method + f": points = {points}")
 
             serializer = DataPointSerializerDisplay(points, many=True)
 
-            to_send = Response(serializer.data, status=status.HTTP_200_OK)
-            # to_send = Response(_m('No Data Found'), status=status.HTTP_200_OK)
-
-            if print_debug: print(to_send)
+            to_send = _data(serializer)
+            if _tracing: logger.info(__method + f": return = {to_send}")
             return to_send
         except Exception as e:
-            if print_debug: print(e)
+            logger.warning(__method + f": error {e} user = {user}, data = {data}")
             return Response(_m(f"Could not access data ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['GET', 'POST'], url_path='user/recent')
     def recent(self, request, pk=None, *arg, **kwargs):
-        if print_debug: print(f"Filtered indicator data request received for user")
+        __method = _context + self.__class__.__name__ + '.' + 'recent'
+        if _tracing: logger.info(__method + f"({request})")
+
+        user: User = None
+
         try:
             user: User = request.user
-
-            if print_debug: print(user)
+            if _tracing: logger.info(__method + f": user = {user}")
 
             indicator: Indicator = Indicator.objects.prefetch_related('int_data_points', 'float_data_points').get(pk=pk)
+            if _tracing: logger.info(__method + f": indicator = {indicator}")
 
             point = indicator.data_class().objects.filter(user=user).latest('time')
+            if _tracing: logger.info(__method + f": point = {point}")
 
             serializer = DataPointSerializerDisplay(point, many=False)
 
-            to_send = Response(serializer.data, status=status.HTTP_200_OK)
-            # to_send = Response(_m('No Data Found'), status=status.HTTP_200_OK)
-
-            if print_debug: print(to_send)
+            to_send = _data(serializer)
+            if _tracing: logger.info(__method + f": return = {to_send}")
             return to_send
         except Exception as e:
-            if print_debug: print(e)
+            logger.warning(__method + f": error {e} user = {user}")
             return Response(_m(f"Could not access data ({e})"), status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -559,16 +591,22 @@ class UserSurveyHistoryViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['GET', 'POST'])
     def available(self, request, *args, **kwargs):
+        __method = _context + self.__class__.__name__ + '.' + 'available'
+        if _tracing: logger.info(__method + f"({request})")
+
+        user: User = None
+
         try:
             user: User = request.user
+            if _tracing: logger.info(__method + f": user = {user}")
 
             serializer = AvailableSurveySerializer(user.get_available_surveys(), many=True)
 
             to_send = Response(serializer.data, status=status.HTTP_201_CREATED)
-            if print_debug or print_debug2: print(to_send)
+            if _tracing: logger.info(__method + f": return = {to_send}")
             return to_send
         except Exception as e:
-            if print_debug or print_debug2: print(e)
+            logger.warning(__method + f": error {e} user = {user}")
             return _r(f"Could not find surveys ({e})", status.HTTP_400_BAD_REQUEST)
 
     #@action(detail=True, methods=['POST', 'GET'])
@@ -586,7 +624,7 @@ class UserSurveyHistoryViewSet(viewsets.ModelViewSet):
 
 
 class AvailableSurveyViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Survey.objects.all()
+    queryset = Form.all_surveys()
     serializer_class = AvailableSurveySerializer
 
 
