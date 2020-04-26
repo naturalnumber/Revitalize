@@ -13,17 +13,29 @@ This is one half of the Revitalize Virtual Wellness System. This repository cont
 
 ### Initial Setup
 
-Clone this repo and follow the steps for your operating system
+It is recommended that you use pycharm for working with the backend. 
 
-#### Windows
-""
+First clone this repo, install python 3.7 and the Python package manager pip
 
-#### Mac
-""
+If you have pycharm locate the terminal and type in the following commands
+
+`./setup_environment.sh` This will take you through the initial setup including setting up the virtual environment, installing the required packages and will instruct you to run the following commands.
+
+1) `./Scripts/reinitialize_database.sh` This will setup the database
+
+2) `./manage.py createsuperuser` This will ask you for login information for the superuser
+
+3) `./Scripts/do_migration.sh` This finishes the setup
+
+To load surveys the following commands must be executed
+
+`python ./manage.py shell` to enter a python command mode
+
+`exec(open("./load_surveys.py").read())` will load the surveys into the database
 
 ### Starting the Project
 
-""
+In pycharm there is a `Run` button in the top right corner, there will be a configuration called `start_server`, with the parameter `runserver`, that is selected. Clicking the Run button should start the server. Clicking the url that is shown in the run console will open your web browser where you can navigate to either `.../admin/` or `.../labtech/`.
 
 ## Third Party Dependencies
 
@@ -65,4 +77,3 @@ The form model is also used to link a form to a `submission` so that the data sa
 
 ## Backend Interface
 Django includes a very flexible admin interface that provides a user friendly way of interacting with database values. In our application there are two different admin interfaces divided into high level admin users and labtech users who have fewer permissions. These users are identified by the boolean fields `is_lab_tech`, `is_staff` and `is_superuser`.
-
