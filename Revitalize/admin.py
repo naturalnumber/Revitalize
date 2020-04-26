@@ -577,7 +577,7 @@ class QuestionGroupAdmin(admin.ModelAdmin):
         for inline in self.get_inline_instances(request, group):
             # hide MyInline in the add view
 
-            if inline is not None and (not isinstance(inline, tuple(_q_type_inlines))
+            if group is not None and (not isinstance(inline, tuple(_q_type_inlines))
                                        or inline.model is Question
                                        or inline.model is group.data_class()):
                 yield inline.get_formset(request, group), inline
@@ -628,7 +628,7 @@ class IndicatorAdmin(admin.ModelAdmin):
         for inline in self.get_inline_instances(request, indicator):
             # hide MyInline in the add view
 
-            if inline is not None and (not isinstance(inline, tuple([IntDataPointInline, FloatDataPointInline]))
+            if indicator is not None and (not isinstance(inline, tuple([IntDataPointInline, FloatDataPointInline]))
                                        or inline.model is indicator.data_class()):
                 yield inline.get_formset(request, indicator), inline
 
