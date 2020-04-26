@@ -42,10 +42,10 @@ class User(AbstractUser):
         q: QuerySet
         point_q_sets = []
 
-        if point_data_types is None or Indicator.DataType.INT.value in point_data_types:
-            point_q_sets.append(IntDataPoint.objects.filter(user=self, **kwargs))
         if point_data_types is None or Indicator.DataType.FLOAT.value in point_data_types:
             point_q_sets.append(FloatDataPoint.objects.filter(user=self, **kwargs))
+        if point_data_types is None or Indicator.DataType.INT.value in point_data_types:
+            point_q_sets.append(IntDataPoint.objects.filter(user=self, **kwargs))
 
         return point_q_sets
 
