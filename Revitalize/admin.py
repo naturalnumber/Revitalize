@@ -539,6 +539,9 @@ class SubmissionAdmin(admin.ModelAdmin):
 
     inlines = [IntDataPointInline2, FloatDataPointInline2]
 
+    def has_add_permission(self, request, obj=None):
+        return False
+
 
 @admin.register(Form, site=admin_site)
 class FormAdmin(admin.ModelAdmin):
