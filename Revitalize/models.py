@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 from django.db import models
@@ -29,8 +30,50 @@ print_debug_a = True
 print_test_data = False
 
 
+# class UserManager(BaseUserManager):
+#     use_in_migrations = True
+#
+#     @classmethod
+#     def normalize_email(cls, email):
+#         email = email or ''
+#         try:
+#             email_name, domain_part = email.strip().rsplit('@', 1)
+#         except ValueError:
+#             pass
+#         else:
+#             email = email_name + '@' + domain_part.lower()
+#         return email
+#
+#     def _create_user(self, username, email, password, *args, **kwargs):
+#         kwargs.setdefault('is_active', True)
+#         user = self.model(username=username, email=email, password=password, *args, **kwargs)
+#         user.set_password(password)
+#         user.save(using=self._db)
+#         return user
+#
+#     def create_user(self, username, email, password, *args, **kwargs):
+#         kwargs.setdefault('is_superuser', False)
+#         return self._create_user(username, email, password, *args, **kwargs)
+#
+#     def create_superuser(self, username, email, password, *args, **kwargs):
+#         kwargs['is_superuser'] = True
+#         kwargs['is_staff'] = True
+#         return self._create_user(username, email, password, *args, **kwargs)
+#
+#     def create_labtechuser(self, username, email, password, *args, **kwargs):
+#         kwargs['is_superuser'] = False
+#         kwargs['is_staff'] = True
+#         return self._create_user(username, email, password, *args, **kwargs)
+
+
 class User(AbstractUser):
+    # objects = UserManager()
+
     is_lab_tech = models.BooleanField(default=False)
+    REQUIRED_FIELDS = []
+
+    # class Meta:
+    #     exclude = ['email']
 
     def get_available_surveys(self) -> QuerySet:
         return Form.all_surveys()  # Survey.objects.all()
@@ -67,6 +110,11 @@ class User(AbstractUser):
 
         if _tracing: logger.info(__method + f": points = {points}")
         return points
+
+    def clean(self):
+        setattr(self, self.USERNAME_FIELD, self.normalize_username(self.get_username()))
+        #AbstractBaseUser.clean(self)
+        # self.email = self.__class__.objects.normalize_email(self.email)
 
 
 class String(models.Model):
@@ -307,17 +355,18 @@ class Profile(ModelBase):
     middle_name = models.CharField(max_length=40, null=False, blank=True, verbose_name="Middle Name(s)")
     last_name = models.CharField(max_length=40, blank=False, db_index=True)
 
-    date_of_birth = models.DateField(null=False, db_index=True)
+    date_of_birth = models.DateField(null=True, db_index=True)
     gender = models.CharField(max_length=1, blank=False, choices=GenderType.choices, default=GenderType.NOT_DISCLOSED)
 
-    phone_number = models.CharField(max_length=40, blank=False, help_text="The primary contact number.", db_index=True)
+    phone_number = models.CharField(max_length=40, blank=True, help_text="The primary contact number.", db_index=True)
     phone_number_alt = models.CharField(max_length=40, null=False, blank=True,
                                         help_text="A secondary contact number.",
                                         verbose_name="Alternate Phone Number")
-    email = models.EmailField(blank=False, help_text="The contact email address.")
+    email = models.EmailField(blank=True, help_text="The contact email address.")
 
     # Abstract into an address object
-    address = models.OneToOneField(Address, on_delete=models.CASCADE, verbose_name="Home Address", related_name='user')
+    address = models.OneToOneField(Address, on_delete=models.CASCADE, null=True, blank=True,
+                                   verbose_name="Home Address", related_name='user')
 
     # Legacy
     # street_address = models.CharField(max_length=200, blank=False)
@@ -352,10 +401,7 @@ class Profile(ModelBase):
     notes = models.TextField(blank=True, null=False)
 
     def __str__(self):
-        if len(self.middle_name) > 0:
-            return f"{self.first_name} {self.middle_name} {self.last_name} {self.id}"
-        else:
-            return f"{self.first_name} {self.last_name} {self.id}"
+        return f"{self.name()} ({self.id})"
 
     # Used with views and serializers
     ModelHelper.inherit(_parent, _name)
@@ -384,6 +430,12 @@ class Profile(ModelBase):
     ModelHelper.register(_name, 'password_flag', 40, False)
     ModelHelper.register(_name, 'preferences', 28, False)
     ModelHelper.register(_name, 'notes', 30, to_serialize=False)
+
+    def name(self):
+        if len(self.middle_name) > 0:
+            return f"{self.first_name} {self.middle_name} {self.last_name}"
+        else:
+            return f"{self.first_name} {self.last_name}"
 
     def submission(self, id):
         return Submission.objects.filter(user=self.user, id=id)
