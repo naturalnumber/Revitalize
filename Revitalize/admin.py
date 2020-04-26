@@ -607,8 +607,8 @@ class QuestionAdmin(admin.ModelAdmin):
 
 @admin.register(Indicator, site=admin_site)
 class IndicatorAdmin(admin.ModelAdmin):
-    fields = ('name', 'description', 'origin', 'type', 'max', 'target', 'min', 'unit')
-    exclude = ('flags', 'display', 'specification', 'analysis', 'dynamic', 'categorizable', 'conversion', 'good', )
+    fields = ('name', 'description', 'origin', 'type', 'max', 'target', 'min', 'unit', 'analysis', 'good')
+    exclude = ('flags', 'display', 'specification', 'dynamic', 'categorizable', 'conversion', )
 
     list_display = ('name_', 'type', 'origin', 'creation_time', 'update_time')
     list_filter = ('type', 'origin', 'creation_time', 'update_time')
