@@ -181,6 +181,7 @@ dmypy.json
 /venv/
 revitalize/__pycache__/
 templates/
+!Revitalize/templates
 
 .idea/revitalize.iml
 .idea/misc.xml
