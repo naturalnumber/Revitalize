@@ -301,7 +301,7 @@ admin_site = AdminsSite(name='admin_site')
 
 @admin.register(User, site=admin_site)
 class UserAdmin(admin.ModelAdmin):
-    fields = ('username', 'is_staff', 'is_active', 'is_superuser', 'last_login', 'date_joined')
+    fields = ('username', 'is_staff', 'is_lab_tech', 'is_active', 'is_superuser', 'last_login', 'date_joined')
 
     list_display = ('first_name_', 'last_name_', 'date_of_birth', 'gender',
                     'country', 'street_address', 'city', 'province', 'postal_code',
